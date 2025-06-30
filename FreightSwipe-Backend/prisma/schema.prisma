@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  role          Role
+  truckerProfile TruckerProfile?
+  createdAt     DateTime @default(now())
+}
+
+model TruckerProfile {
+  id         String @id @default(cuid())
+  userId     String @unique
+  user       User   @relation(fields: [userId], references: [id])
+  vehicleType String
+  licenseId   String
+  verified    Boolean @default(false)
+}
+
+enum Role {
+  SHIPPER
+  TRUCKER
+  ADMIN
+}
