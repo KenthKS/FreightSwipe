@@ -36,3 +36,41 @@
     transform: rotate(360deg);
   }
 }
+
+#root {
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  width: 100vw;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  background-color: #fefefe;
+}
+
+.cardContainer {
+  width: 90vw;
+  max-width: 260px;
+  height: 300px;
+}
+
+.card {
+  position: relative;
+  background-color: #fff;
+  width: 80vw;
+  max-width: 260px;
+  height: 300px;
+  shadow-color: #000;
+  shadow-opacity: 0.2;
+  shadow-radius: 5px;
+  shadow-offset: 0px 0px;
+  border-radius: 20px;
+  background-size: cover;
+  background-position: center;
+}
+
+.swipe {
+  position: absolute;
+}

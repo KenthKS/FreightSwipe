@@ -20,6 +20,7 @@ const authMiddleware = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
   try {
     req.user = jwt.verify(token, JWT_SECRET);
+    console.log('Authenticated user:', req.user.id, req.user.role);
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
@@ -27,13 +28,13 @@ const authMiddleware = async (req, res, next) => {
 };
 
 app.post('/auth/signup', async (req, res) => {
-  const { email, password, role } = req.body;
+  const { name, email, password, role } = req.body;
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(400).json({ error: 'Email already exists' });
 
   const hash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
-    data: { email, password: hash, role }
+    data: { name, email, passwordHash: hash, role }
   });
 
   res.json({ token: generateToken(user), user });
@@ -42,7 +43,7 @@ app.post('/auth/signup', async (req, res) => {
 app.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   res.json({ token: generateToken(user), user });
@@ -128,27 +129,168 @@ app.post('/loads', authMiddleware, async (req, res) => {
 app.get('/loads', authMiddleware, async (req, res) => {
   const loads = await prisma.load.findMany({
     where: {
-      status: 'PENDING'
+      shipperId: req.user.id
     }
   });
   res.json(loads);
 });
 
+app.get('/loads/available', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'TRUCKER') {
+    return res.status(403).json({ error: 'Only truckers can view available loads' });
+  }
+  const userId = req.user.id;
+
+  // Find loads that the current trucker has already interacted with
+  const interactedLoadIds = (await prisma.match.findMany({
+    where: {
+      truckerId: userId,
+    },
+    select: {
+      loadId: true,
+    },
+  })).map(match => match.loadId);
+
+  const availableLoads = await prisma.load.findMany({
+    where: {
+      status: 'PENDING',
+      NOT: {
+        id: {
+          in: interactedLoadIds,
+        },
+      },
+    },
+  });
+  res.json(availableLoads);
+});
+
+app.delete('/loads/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  console.log(`DELETE /loads/${id} requested by user ${userId}`);
+
+  try {
+    const load = await prisma.load.findUnique({
+      where: { id },
+    });
+
+    if (!load) {
+      console.log(`Load ${id} not found.`);
+      return res.status(404).json({ error: 'Load not found' });
+    }
+
+    if (load.shipperId !== userId) {
+      console.log(`User ${userId} is unauthorized to delete load ${id}. Shipper ID: ${load.shipperId}`);
+      return res.status(403).json({ error: 'Unauthorized to delete this load' });
+    }
+
+    await prisma.load.delete({
+      where: { id },
+    });
+    console.log(`Load ${id} deleted successfully.`);
+    res.status(204).send(); // No Content
+  } catch (err) {
+    console.error('Failed to delete load:', err);
+    res.status(500).json({ error: 'Failed to delete load' });
+  }
+});
+
 // Match Routes
 app.post('/matches', authMiddleware, async (req, res) => {
-  const { loadId, status } = req.body;
-  const load = await prisma.load.findUnique({ where: { id: loadId } });
-  if (!load) return res.status(404).json({ error: 'Load not found' });
+  const { loadId, status, matchId, action } = req.body; // Added matchId and action
+  const userId = req.user.id;
+  const userRole = req.user.role;
 
-  const match = await prisma.match.create({
-    data: {
-      loadId,
-      truckerId: req.user.id,
-      shipperId: load.shipperId,
-      status
+  if (action === 'swipe' && userRole === 'TRUCKER') {
+    // Trucker initiating a swipe
+    if (!loadId || !['PENDING', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid request for trucker swipe' });
     }
-  });
-  res.json(match);
+
+    const load = await prisma.load.findUnique({ where: { id: loadId } });
+    if (!load) {
+      return res.status(404).json({ error: 'Load not found' });
+    }
+
+    let existingMatch = await prisma.match.findFirst({
+      where: {
+        loadId: loadId,
+        truckerId: userId,
+      },
+    });
+
+    if (existingMatch) {
+      // Update existing match (e.g., trucker changes mind)
+      const updatedMatch = await prisma.match.update({
+        where: { id: existingMatch.id },
+        data: { status: status },
+      });
+      return res.json({ message: 'Match updated', match: updatedMatch });
+    } else {
+      // Create new match
+      const newMatch = await prisma.match.create({
+        data: {
+          loadId,
+          truckerId: userId,
+          shipperId: load.shipperId,
+          status,
+        },
+      });
+      return res.json({ message: 'Match created', match: newMatch });
+    }
+  } else if (action === 'respond' && userRole === 'SHIPPER') {
+    // Shipper responding to a pending match
+    if (!matchId || !['MATCHED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid request for shipper response' });
+    }
+
+    const existingMatch = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { load: true } // Include load to check shipperId
+    });
+
+    if (!existingMatch) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    // Ensure the shipper is authorized to respond to this match
+    if (existingMatch.shipperId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to respond to this match' });
+    }
+
+    // Only allow updating PENDING matches
+    if (existingMatch.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Only pending matches can be responded to' });
+    }
+
+    const updatedMatch = await prisma.match.update({
+      where: { id: matchId },
+      data: { status: status },
+    });
+
+    // If the shipper accepted the match, reject all other pending matches for this load
+    if (status === 'MATCHED') {
+      await prisma.match.updateMany({
+        where: {
+          loadId: existingMatch.load.id,
+          status: 'PENDING',
+          NOT: {
+            id: matchId,
+          },
+        },
+        data: { status: 'REJECTED' },
+      });
+      // Also update the load status to 'MATCHED' or 'COMPLETED' as appropriate
+      await prisma.load.update({
+        where: { id: existingMatch.load.id },
+        data: { status: 'MATCHED' }, // Or 'COMPLETED' if that's the final state after a match
+      });
+    }
+    return res.json({ message: 'Match updated', match: updatedMatch });
+
+  } else {
+    return res.status(400).json({ error: 'Invalid action or user role' });
+  }
 });
 
 // User Routes
@@ -165,7 +307,6 @@ app.get('/matches', authMiddleware, async (req, res) => {
 
   const matches = await prisma.match.findMany({
     where: {
-      status: 'MATCHED',
       OR: [
         { truckerId: userId },
         { shipperId: userId }
@@ -174,7 +315,7 @@ app.get('/matches', authMiddleware, async (req, res) => {
     include: {
       trucker: { select: { id: true, name: true, email: true, role: true } },
       shipper: { select: { id: true, name: true, email: true, role: true } },
-      load: true // Optional: only if you want load info in matches
+      load: true
     }
   });
 

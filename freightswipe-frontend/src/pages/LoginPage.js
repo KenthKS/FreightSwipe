@@ -15,6 +15,7 @@ const LoginPage = () => {
       const response = await axios.post('http://localhost:3001/auth/login', { email, password });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('userId', user.id);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       if (user.role === 'SHIPPER') {

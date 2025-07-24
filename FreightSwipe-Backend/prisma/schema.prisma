@@ -6,129 +6,27 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 model User {
-  id           String          @id @default(cuid())
-  email        String          @unique
-  password     String
-  role         Role            @default(SHIPPER)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  role          Role
   truckerProfile TruckerProfile?
-
-  loads         Load[]           @relation("ShipperLoads")    
-
-  matchesAsTrucker Match[]      @relation("TruckerMatches")
-  matchesAsShipper Match[]      @relation("ShipperMatches")
-
-  reviewsWritten Review[]       @relation("WrittenReviews")
-  reviewsReceived Review[]      @relation("ReceivedReviews")
-
-  chatRooms     ChatRoomUser[]
-  locations     Location[]
-  messagesSent  Message[]
+  loads         Load[]
+  truckerMatches Match[]  @relation("truckerMatches")
+  shipperMatches Match[]  @relation("shipperMatches")
+  createdAt     DateTime @default(now())
 }
 
 model TruckerProfile {
-  id           String   @id @default(cuid())
-  user         User     @relation(fields: [userId], references: [id])
-  userId       String   @unique
-  vehicleType  String
-  licenseId    String
-  verified     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Load {
-  id            String   @id @default(cuid())
-  shipper       User     @relation("ShipperLoads", fields: [shipperId], references: [id])
-  shipperId     String
-  origin        String
-  destination   String
-  weight        Float
-  budget        Float
-  deadline      DateTime
-  description   String?
-  status        LoadStatus  @default(PENDING)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  matches       Match[]
-}
-model Match {
-  id            String   @id @default(cuid())
-
-  load          Load     @relation(fields: [loadId], references: [id])
-  loadId        String
-
-  trucker       User     @relation("TruckerMatches", fields: [truckerId], references: [id])
-  truckerId     String
-
-  shipper       User     @relation("ShipperMatches", fields: [shipperId], references: [id])
-  shipperId     String
-
-  status        MatchStatus @default(PENDING)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  chatRoom      ChatRoom?
-}
-
-
-model ChatRoom {
-  id            String       @id @default(cuid())
-  match         Match        @relation(fields: [matchId], references: [id])
-  matchId       String       @unique
-  messages      Message[]
-  participants  ChatRoomUser[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-}
-
-model ChatRoomUser {
-  id          String    @id @default(cuid())
-  chatRoom    ChatRoom  @relation(fields: [chatRoomId], references: [id])
-  chatRoomId  String
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String
-  joinedAt    DateTime  @default(now())
-}
-
-model Message {
-  id          String    @id @default(cuid())
-
-  chatRoom    ChatRoom  @relation(fields: [chatRoomId], references: [id])
-  chatRoomId  String
-
-  sender      User      @relation(fields: [senderId], references: [id])
-  senderId    String
-
-  content     String
-  sentAt      DateTime  @default(now())
-}
-
-model Review {
-  id          String    @id @default(cuid())
-
-  reviewer    User      @relation("WrittenReviews", fields: [reviewerId], references: [id])
-  reviewerId  String
-
-  target      User      @relation("ReceivedReviews", fields: [targetId], references: [id])
-  targetId    String
-
-  rating      Int       @default(5) // 1 to 5
-  comment     String?
-
-  createdAt   DateTime  @default(now())
-}
-
-model Location {
-  id          String    @id @default(cuid())
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String
-  latitude    Float
-  longitude   Float
-  recordedAt  DateTime  @default(now())
+  id         String @id @default(cuid())
+  userId     String @unique
+  user       User   @relation(fields: [userId], references: [id])
+  vehicleType String
+  licenseId   String
+  verified    Boolean @default(false)
 }
 
 enum Role {
@@ -137,17 +35,29 @@ enum Role {
   ADMIN
 }
 
-enum LoadStatus {
-  PENDING
-  ACCEPTED
-  IN_TRANSIT
-  DELIVERED
-  CANCELLED
+model Load {
+  id          String   @id @default(cuid())
+  shipperId   String
+  origin      String
+  destination String
+  weight      Float
+  budget      Float
+  deadline    DateTime
+  description String?
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  shipper     User     @relation(fields: [shipperId], references: [id])
+  matches     Match[]
 }
 
-enum MatchStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-  COMPLETED
+model Match {
+  id        String   @id @default(cuid())
+  loadId    String
+  truckerId String
+  shipperId String
+  status    String
+  createdAt DateTime @default(now())
+  load      Load     @relation(fields: [loadId], references: [id])
+  trucker   User     @relation("truckerMatches", fields: [truckerId], references: [id])
+  shipper   User     @relation("shipperMatches", fields: [shipperId], references: [id])
 }
