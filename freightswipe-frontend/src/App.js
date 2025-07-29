@@ -9,6 +9,7 @@ import SignupPage from './pages/SignupPage';
 import ShipperDashboard from './pages/ShipperDashboard';
 import TruckerDashboard from './pages/TruckerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import ReviewsPage from './pages/ReviewsPage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/shipper/dashboard" element={<ShipperDashboard />} />
         <Route path="/trucker/dashboard" element={<TruckerDashboard />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/reviews/:userId" element={<ReviewsPage />} />
       </Routes>
     </Router>
   );

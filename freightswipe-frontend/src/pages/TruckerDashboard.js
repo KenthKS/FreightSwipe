@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useSprings, animated } from '@react-spring/web';
 import { useGesture } from '@use-gesture/react';
@@ -184,6 +185,7 @@ const TruckerDashboard = () => {
               <li key={match.id} className="list-group-item">
                 <h5>Load: {match.load.origin} to {match.load.destination}</h5>
                 <p>Shipper: {match.shipper.name} ({match.shipper.email})</p>
+                <Link to={`/reviews/${match.shipper.id}`} className="btn btn-info btn-sm me-2">View Reviews</Link>
                 <p>Status: {match.status}</p>
                 {match.load.status === 'MATCHED' && !match.load.truckerInTransitConfirmed && (
                   <button className="btn btn-info btn-sm mt-2" onClick={() => handleUpdateLoadStatus(match.load.id, 'IN_TRANSIT')}>Mark as In Transit</button>
@@ -261,6 +263,7 @@ const TruckerDashboard = () => {
               <li key={match.id} className="list-group-item">
                 <h5>Load: {match.load.origin} to {match.load.destination}</h5>
                 <p>Shipper: {match.shipper.name} ({match.shipper.email})</p>
+                <Link to={`/reviews/${match.shipper.id}`} className="btn btn-info btn-sm me-2">View Reviews</Link>
                 <p>Status: {match.load.status}</p>
                 {match.load.status === 'COMPLETED' && (
                   <button className="btn btn-primary btn-sm mt-2" onClick={() => handleReview(match.load.id)}>Leave Review</button>

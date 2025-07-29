@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import CreateLoadForm from '../components/CreateLoadForm';
 
@@ -187,6 +187,7 @@ const ShipperDashboard = () => {
               <li key={match.id} className="list-group-item">
                 <h5>Load: {match.load.origin} to {match.load.destination}</h5>
                 <p>Trucker: {match.trucker.name} ({match.trucker.email})</p>
+                <Link to={`/reviews/${match.trucker.id}`} className="btn btn-info btn-sm me-2">View Reviews</Link>
                 <p>Status: {match.status}</p>
                 {match.load.status === 'MATCHED' && !match.load.shipperInTransitConfirmed && (
                   <button className="btn btn-info btn-sm mt-2" onClick={() => handleUpdateLoadStatus(match.load.id, 'IN_TRANSIT')}>Mark as In Transit</button>
@@ -233,6 +234,7 @@ const ShipperDashboard = () => {
               <li key={match.id} className="list-group-item">
                 <h5>Load: {match.load.origin} to {match.load.destination}</h5>
                 <p>Trucker: {match.trucker.name} ({match.trucker.email})</p>
+                <Link to={`/reviews/${match.trucker.id}`} className="btn btn-info btn-sm me-2">View Reviews</Link>
                 <p>Status: {match.load.status}</p>
                 {match.load.status === 'COMPLETED' && (
                   <button className="btn btn-primary btn-sm mt-2" onClick={() => handleReview(match.load.id)}>Leave Review</button>

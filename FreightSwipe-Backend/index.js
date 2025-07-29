@@ -420,7 +420,19 @@ app.get('/reviews/:userId', authMiddleware, async (req, res) => {
       },
     });
 
-    res.json(reviews);
+    const averageRating = await prisma.review.aggregate({
+      _avg: {
+        rating: true,
+      },
+      where: {
+        reviewedId: userId,
+      },
+    });
+
+    res.json({
+      reviews,
+      averageRating: averageRating._avg.rating,
+    });
   } catch (err) {
     console.error('Failed to fetch reviews:', err);
     res.status(500).json({ error: 'Failed to fetch reviews' });
