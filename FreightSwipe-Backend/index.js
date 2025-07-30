@@ -132,6 +132,9 @@ app.get('/loads', authMiddleware, async (req, res) => {
   const loads = await prisma.load.findMany({
     where: {
       shipperId: req.user.id
+    },
+    include: {
+      reviews: true
     }
   });
   res.json(loads);
@@ -215,7 +218,7 @@ app.get('/matches', authMiddleware, async (req, res) => {
       },
       include: {
         shipper: { select: { id: true, name: true, email: true, role: true } },
-        load: true
+        load: { include: { reviews: true } }
       }
     });
   } else if (userRole === 'SHIPPER') {
@@ -225,7 +228,7 @@ app.get('/matches', authMiddleware, async (req, res) => {
       },
       include: {
         trucker: { select: { id: true, name: true, email: true, role: true } },
-        load: true
+        load: { include: { reviews: true } }
       }
     });
   } else {
@@ -233,7 +236,7 @@ app.get('/matches', authMiddleware, async (req, res) => {
       include: {
         trucker: { select: { id: true, name: true, email: true, role: true } },
         shipper: { select: { id: true, name: true, email: true, role: true } },
-        load: true
+        load: { include: { reviews: true } }
       }
     });
   }

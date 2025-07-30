@@ -22,6 +22,7 @@ const ShipperDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLoads(response.data);
+      setCompletedLoads(response.data.filter(load => load.status === 'COMPLETED'));
     } catch (err) {
       setError('Failed to fetch loads');
     }
@@ -36,7 +37,7 @@ const ShipperDashboard = () => {
       setMatchedLoads(response.data.filter(match => match.status === 'MATCHED' && match.load.status === 'MATCHED'));
       setPendingMatches(response.data.filter(match => match.status === 'PENDING' && match.shipperId === localStorage.getItem('userId')));
       setInTransitLoads(response.data.filter(match => match.load.status === 'IN_TRANSIT'));
-      setCompletedLoads(response.data.filter(match => match.load.status === 'COMPLETED'));
+      setCompletedLoads(response.data.filter(match => match.load && match.load.status === 'COMPLETED'));
     } catch (err) {
       setError('Failed to fetch matched loads');
     }
@@ -127,7 +128,7 @@ const ShipperDashboard = () => {
       setReviewLoadId(null);
       setReviewRating(5);
       setReviewComment('');
-      // Optionally, refresh completed loads or show a success message
+      fetchMatchedLoads(); // Re-fetch loads to update review status
     } catch (err) {
       console.error('Failed to submit review:', err);
       setError('Failed to submit review');
@@ -230,17 +231,22 @@ const ShipperDashboard = () => {
         <h3>Completed Loads</h3>
         <ul className="list-group">
           {completedLoads.length > 0 ? (
-            completedLoads.map(match => (
-              <li key={match.id} className="list-group-item">
-                <h5>Load: {match.load.origin} to {match.load.destination}</h5>
-                <p>Trucker: {match.trucker.name} ({match.trucker.email})</p>
-                <Link to={`/reviews/${match.trucker.id}`} className="btn btn-info btn-sm me-2">View Reviews</Link>
-                <p>Status: {match.load.status}</p>
-                {match.load.status === 'COMPLETED' && (
-                  <button className="btn btn-primary btn-sm mt-2" onClick={() => handleReview(match.load.id)}>Leave Review</button>
-                )}
-              </li>
-            ))
+            completedLoads.map(load => {
+              const userId = localStorage.getItem('userId');
+              const hasReviewed = load.reviews && Array.isArray(load.reviews) && load.reviews.some(review => review.reviewerId === userId);
+              return (
+                <li key={load.id} className="list-group-item">
+                  <h5>{load.origin} to {load.destination}</h5>
+                  <p>Weight: {load.weight} lbs</p>
+                  <p>Budget: ${load.budget}</p>
+                  <p>Deadline: {new Date(load.deadline).toLocaleDateString()}</p>
+                  <p>Status: {load.status}</p>
+                  {load.status === 'COMPLETED' && !hasReviewed && (
+                    <button className="btn btn-primary btn-sm mt-2" onClick={() => handleReview(load.id)}>Leave Review</button>
+                  )}
+                </li>
+              )
+            })
           ) : (
             <li className="list-group-item">No completed loads yet.</li>
           )}
