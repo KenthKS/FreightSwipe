@@ -37,7 +37,6 @@ const ShipperDashboard = () => {
       setMatchedLoads(response.data.filter(match => match.status === 'MATCHED' && match.load.status === 'MATCHED'));
       setPendingMatches(response.data.filter(match => match.status === 'PENDING' && match.shipperId === localStorage.getItem('userId')));
       setInTransitLoads(response.data.filter(match => match.load.status === 'IN_TRANSIT'));
-      setCompletedLoads(response.data.filter(match => match.load && match.load.status === 'COMPLETED'));
     } catch (err) {
       setError('Failed to fetch matched loads');
     }
