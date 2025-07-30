@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_DB: freightswipe
+      POSTGRES_USER: kabirkenth
+      POSTGRES_PASSWORD: password # You should use a strong password in production
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kabirkenth -d freightswipe"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./FreightSwipe/FreightSwipe-Backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://kabirkenth:password@db:5432/freightswipe
+      JWT_SECRET: supersecret # Use a strong secret in production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    command: npm start
+
+  frontend:
+    build:
+      context: ./FreightSwipe/freightswipe-frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./FreightSwipe/freightswipe-frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: always
+    environment:
+      REACT_APP_BACKEND_URL: http://localhost:3001
+
+volumes:
+  db_data:
