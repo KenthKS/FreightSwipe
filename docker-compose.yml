@@ -31,14 +31,14 @@ services:
       db:
         condition: service_healthy
     restart: always
-    command: npm start
+    command: sh -c "npx prisma migrate deploy && npm start"
 
   frontend:
     build:
       context: ./freightswipe-frontend
       dockerfile: Dockerfile
     volumes:
-      - ./FreightSwipe/freightswipe-frontend:/app
+      - ./freightswipe-frontend:/app
     ports:
       - "3000:3000"
     depends_on:
