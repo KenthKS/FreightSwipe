@@ -19,8 +19,8 @@ const authMiddleware = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
   try {
+    // Verify the token and attach user information to the request
     req.user = jwt.verify(token, JWT_SECRET);
-    console.log('Authenticated user:', req.user.id, req.user.role);
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
@@ -29,23 +29,37 @@ const authMiddleware = async (req, res, next) => {
 
 app.post('/auth/signup', async (req, res) => {
   const { name, email, password, role } = req.body;
+  // Check if a user with the given email already exists
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(400).json({ error: 'Email already exists' });
 
+  // Hash the password before storing it
   const hash = await bcrypt.hash(password, 10);
+  // Create the new user in the database
   const user = await prisma.user.create({
     data: { name, email, passwordHash: hash, role }
   });
 
+  // Generate and return a token for the newly registered user
   res.json({ token: generateToken(user), user });
 });
 
+/**
+ * @route POST /auth/login
+ * @description Authenticates a user and returns a JWT.
+ * @access Public
+ */
 app.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
+  // Find the user by email
   const user = await prisma.user.findUnique({ where: { email } });
+
+  // Check if user exists and password is correct
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
+
+  // Generate and return a token for the authenticated user
   res.json({ token: generateToken(user), user });
 });
 
@@ -54,6 +68,7 @@ app.post('/swipe', authMiddleware, async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
 
+  // Validate swipe direction
   if (!['right', 'left'].includes(direction)) {
     return res.status(400).json({ error: 'Invalid swipe direction' });
   }
@@ -134,7 +149,22 @@ app.get('/loads', authMiddleware, async (req, res) => {
       shipperId: req.user.id
     },
     include: {
-      reviews: true
+      reviews: true,
+      matches: {
+        where: {
+          status: 'MATCHED'
+        },
+        include: {
+          trucker: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          }
+        }
+      }
     }
   });
   res.json(loads);
@@ -180,24 +210,20 @@ app.delete('/loads/:id', authMiddleware, async (req, res) => {
     });
 
     if (!load) {
-      console.log(`Load ${id} not found.`);
       return res.status(404).json({ error: 'Load not found' });
     }
 
     if (load.shipperId !== userId) {
-      console.log(`User ${userId} is unauthorized to delete load ${id}. Shipper ID: ${load.shipperId}`);
       return res.status(403).json({ error: 'Unauthorized to delete this load' });
     }
 
     if (load.status === 'MATCHED') {
-      console.log(`Load ${id} is matched and cannot be deleted.`);
       return res.status(403).json({ error: 'Matched loads cannot be deleted' });
     }
 
     await prisma.load.delete({
       where: { id },
     });
-    console.log(`Load ${id} deleted successfully.`);
     res.status(204).send(); // No Content
   } catch (err) {
     console.error('Failed to delete load:', err);

@@ -3,18 +3,21 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import CreateLoadForm from '../components/CreateLoadForm';
 
+// ShipperDashboard component for managing loads, matches, and reviews
 const ShipperDashboard = () => {
-  const [loads, setLoads] = useState([]);
-  const [matchedLoads, setMatchedLoads] = useState([]);
-  const [pendingMatches, setPendingMatches] = useState([]);
-  const [inTransitLoads, setInTransitLoads] = useState([]);
-  const [completedLoads, setCompletedLoads] = useState([]);
-  const [error, setError] = useState('');
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewLoadId, setReviewLoadId] = useState(null);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
+  // State variables for different categories of loads and UI controls
+  const [loads, setLoads] = useState([]); // All loads created by the shipper
+  const [matchedLoads, setMatchedLoads] = useState([]); // Loads that have been matched with a trucker
+  const [pendingMatches, setPendingMatches] = useState([]); // Matches initiated by truckers, awaiting shipper's response
+  const [inTransitLoads, setInTransitLoads] = useState([]); // Loads currently in transit
+  const [completedLoads, setCompletedLoads] = useState([]); // Loads that have been completed
+  const [error, setError] = useState(''); // State for displaying error messages
+  const [showReviewForm, setShowReviewForm] = useState(false); // Controls visibility of the review form
+  const [reviewLoadId, setReviewLoadId] = useState(null); // ID of the load being reviewed
+  const [reviewRating, setReviewRating] = useState(5); // Rating for the review
+  const [reviewComment, setReviewComment] = useState(''); // Comment for the review
 
+  // Fetches all loads created by the current shipper
   const fetchLoads = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -22,55 +25,64 @@ const ShipperDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLoads(response.data);
+      // Filter for loads that are marked as 'COMPLETED'
       setCompletedLoads(response.data.filter(load => load.status === 'COMPLETED'));
     } catch (err) {
       setError('Failed to fetch loads');
     }
   };
 
+  // Fetches all matches related to the current shipper
   const fetchMatchedLoads = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Filter for matches where the status is 'MATCHED' and the associated load is also 'MATCHED'
       setMatchedLoads(response.data.filter(match => match.status === 'MATCHED' && match.load.status === 'MATCHED'));
+      // Filter for pending matches where the current user is the shipper
       setPendingMatches(response.data.filter(match => match.status === 'PENDING' && match.shipperId === localStorage.getItem('userId')));
+      // Filter for loads that are currently 'IN_TRANSIT'
       setInTransitLoads(response.data.filter(match => match.load.status === 'IN_TRANSIT'));
     } catch (err) {
       setError('Failed to fetch matched loads');
     }
   };
 
+  // Effect hook to fetch initial data when the component mounts
   useEffect(() => {
     fetchLoads();
     fetchMatchedLoads();
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once on mount
 
+  // Handles adding a newly created load to the state
   const handleNewLoad = (newLoad) => {
     setLoads([newLoad, ...loads]);
   };
 
+  // Handles shipper's response (accept/reject) to a pending match
   const handleMatchResponse = async (matchId, status) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { matchId, status, action: 'respond' }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchMatchedLoads(); // Refresh matched and pending loads
+      fetchMatchedLoads(); // Re-fetch matched and pending loads to update UI
     } catch (err) {
       console.error('Failed to respond to match:', err);
       setError('Failed to respond to match');
     }
   };
 
+  // Handles updating the status of a load (e.g., from MATCHED to IN_TRANSIT, or IN_TRANSIT to COMPLETED)
   const handleUpdateLoadStatus = async (loadId, status) => {
     try {
       const token = localStorage.getItem('token');
       await axios.put(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}/status`, { status }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchLoads(); // Re-fetch available loads
+      fetchLoads(); // Re-fetch available loads to update status
       fetchMatchedLoads(); // Re-fetch matched loads to update all lists
     } catch (err) {
       console.error('Failed to update load status:', err);
@@ -78,17 +90,15 @@ const ShipperDashboard = () => {
     }
   };
 
+  // Handles deleting a load
   const handleDeleteLoad = async (loadId) => {
     if (window.confirm('Are you sure you want to delete this load?')) {
       try {
         const token = localStorage.getItem('token');
-        console.log('Attempting to delete load with ID:', loadId);
-        console.log('Sending DELETE request to:', `${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}`);
         await axios.delete(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setLoads(loads.filter(load => load.id !== loadId));
-        console.log('Load deleted successfully from frontend state.');
+        setLoads(loads.filter(load => load.id !== loadId)); // Remove deleted load from state
       } catch (err) {
         console.error('Failed to delete load:', err);
         setError('Failed to delete load');
@@ -96,6 +106,7 @@ const ShipperDashboard = () => {
     }
   };
 
+  // Handles cancelling a load, incurring a fee
   const handleCancelLoad = async (loadId) => {
     if (window.confirm('Are you sure you want to cancel this load? A $5 fee will be charged to your account.')) {
       try {
@@ -112,17 +123,20 @@ const ShipperDashboard = () => {
     }
   };
 
+  // Prepares the review form for a specific load
   const handleReview = (loadId) => {
     setReviewLoadId(loadId);
     setShowReviewForm(true);
   };
 
+  // Submits a new review for a completed load
   const handleSubmitReview = async () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(`${process.env.REACT_APP_BACKEND_URL}/reviews`, { loadId: reviewLoadId, rating: parseInt(reviewRating), comment: reviewComment }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Reset review form state
       setShowReviewForm(false);
       setReviewLoadId(null);
       setReviewRating(5);
@@ -233,6 +247,7 @@ const ShipperDashboard = () => {
             completedLoads.map(load => {
               const userId = localStorage.getItem('userId');
               const hasReviewed = load.reviews && Array.isArray(load.reviews) && load.reviews.some(review => review.reviewerId === userId);
+              const matchedTrucker = load.matches && load.matches.length > 0 ? load.matches[0].trucker : null;
               return (
                 <li key={load.id} className="list-group-item">
                   <h5>{load.origin} to {load.destination}</h5>
@@ -242,6 +257,9 @@ const ShipperDashboard = () => {
                   <p>Status: {load.status}</p>
                   {load.status === 'COMPLETED' && !hasReviewed && (
                     <button className="btn btn-primary btn-sm mt-2" onClick={() => handleReview(load.id)}>Leave Review</button>
+                  )}
+                  {load.status === 'COMPLETED' && matchedTrucker && (
+                    <Link to={`/reviews/${matchedTrucker.id}`} className="btn btn-info btn-sm mt-2 ms-2">View Reviews</Link>
                   )}
                 </li>
               )
