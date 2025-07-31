@@ -10,12 +10,15 @@ const CreateLoadForm = ({ onNewLoad }) => {
   const [deadline, setDeadline] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Clear any previous errors immediately
+    setSuccess(''); // Clear any previous success messages immediately
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:3001/loads', {
+      const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
         origin,
         destination,
         weight: parseFloat(weight),
@@ -32,8 +35,11 @@ const CreateLoadForm = ({ onNewLoad }) => {
       setBudget('');
       setDeadline('');
       setDescription('');
+      setSuccess('Load Created Successfully!');
+      setTimeout(() => setSuccess(''), 3000); // Clear success message after 3 seconds
     } catch (err) {
       setError('Failed to create load');
+      setSuccess(''); // Ensure success is cleared on error
     }
   };
 
@@ -42,6 +48,7 @@ const CreateLoadForm = ({ onNewLoad }) => {
       <div className="card-body">
         <h5 className="card-title">Create New Load</h5>
         {error && <div className="alert alert-danger">{error}</div>}
+        {success && <div className="alert alert-primary">{success}</div>}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <label className="form-label">Origin</label>
