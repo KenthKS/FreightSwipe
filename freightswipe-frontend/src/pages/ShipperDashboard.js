@@ -27,6 +27,8 @@ const ShipperDashboard = () => {
       setLoads(response.data);
       // Filter for loads that are marked as 'COMPLETED'
       setCompletedLoads(response.data.filter(load => load.status === 'COMPLETED'));
+      // Filter for loads that are marked as 'IN_TRANSIT'
+      setInTransitLoads(response.data.filter(load => load.status === 'IN_TRANSIT'));
     } catch (err) {
       setError('Failed to fetch loads');
     }
@@ -43,8 +45,6 @@ const ShipperDashboard = () => {
       setMatchedLoads(response.data.filter(match => match.status === 'MATCHED' && match.load.status === 'MATCHED'));
       // Filter for pending matches where the current user is the shipper
       setPendingMatches(response.data.filter(match => match.status === 'PENDING' && match.shipperId === localStorage.getItem('userId')));
-      // Filter for loads that are currently 'IN_TRANSIT'
-      setInTransitLoads(response.data.filter(match => match.load.status === 'IN_TRANSIT'));
     } catch (err) {
       setError('Failed to fetch matched loads');
     }
@@ -231,16 +231,19 @@ const ShipperDashboard = () => {
         <h3>Loads In Transit</h3>
         <ul className="list-group">
           {inTransitLoads.length > 0 ? (
-            inTransitLoads.map(match => (
-              <li key={match.id} className="list-group-item">
-                <h5>Load: {match.load.origin} to {match.load.destination}</h5>
-                <p>Trucker: {match.trucker.name} ({match.trucker.email})</p>
-                <p>Status: {match.load.status}</p>
-                {match.load.status === 'IN_TRANSIT' && (
-                  <button className="btn btn-success btn-sm mt-2" onClick={() => handleUpdateLoadStatus(match.load.id, 'COMPLETED')}>Mark as Completed</button>
-                )}
-              </li>
-            ))
+            inTransitLoads.map(load => {
+              const matchedTrucker = load.matches && load.matches.length > 0 ? load.matches.find(match => match.status === 'MATCHED')?.trucker : null;
+              return (
+                <li key={load.id} className="list-group-item">
+                  <h5>Load: {load.origin} to {load.destination}</h5>
+                  {matchedTrucker && <p>Trucker: {matchedTrucker.name} ({matchedTrucker.email})</p>}
+                  <p>Status: {load.status}</p>
+                  {load.status === 'IN_TRANSIT' && (
+                    <button className="btn btn-success btn-sm mt-2" onClick={() => handleUpdateLoadStatus(load.id, 'COMPLETED')}>Mark as Completed</button>
+                  )}
+                </li>
+              )
+            })
           ) : (
             <li className="list-group-item">No loads in transit.</li>
           )}
