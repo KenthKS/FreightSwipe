@@ -240,11 +240,12 @@ app.get('/matches', authMiddleware, async (req, res) => {
   if (userRole === 'TRUCKER') {
     matches = await prisma.match.findMany({
       where: {
-        truckerId: userId
+        truckerId: userId,
+        status: 'MATCHED'
       },
       include: {
-        shipper: { select: { id: true, name: true, email: true, role: true } },
-        load: { include: { reviews: true } }
+        shipper: { select: { id: true, name: true, email: true, role: true } }, // Include shipper details
+        load: { include: { reviews: true } } // Include load details and its reviews
       }
     });
   } else if (userRole === 'SHIPPER') {

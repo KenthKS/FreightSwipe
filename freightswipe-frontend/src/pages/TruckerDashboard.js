@@ -4,20 +4,24 @@ import axios from 'axios';
 import { useSprings, animated } from '@react-spring/web';
 import { useGesture } from '@use-gesture/react';
 
+// TruckerDashboard component for managing available loads, matches, and reviews
 const TruckerDashboard = () => {
-  const [loads, setLoads] = useState([]);
-  const [matchedLoads, setMatchedLoads] = useState([]);
-  const [acceptedLoads, setAcceptedLoads] = useState([]);
-  const [declinedLoads, setDeclinedLoads] = useState([]);
-  const [inTransitLoads, setInTransitLoads] = useState([]);
-  const [completedLoads, setCompletedLoads] = useState([]);
-  const [error, setError] = useState('');
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewLoadId, setReviewLoadId] = useState(null);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
-  const [gone] = useState(() => new Set()); // The set stores all the cards that are flicked out
+  // State variables for different categories of loads and UI controls
+  const [loads, setLoads] = useState([]); // Available loads for swiping
+  const [matchedLoads, setMatchedLoads] = useState([]); // Loads that have been matched with a shipper
+  const [acceptedLoads, setAcceptedLoads] = useState([]); // Loads accepted by the trucker, pending shipper confirmation
+  const [declinedLoads, setDeclinedLoads] = useState([]); // Loads declined by the trucker
+  const [inTransitLoads, setInTransitLoads] = useState([]); // Loads currently in transit
+  const [completedLoads, setCompletedLoads] = useState([]); // Loads that have been completed
+  const [error, setError] = useState(''); // State for displaying error messages
+  const [showReviewForm, setShowReviewForm] = useState(false); // Controls visibility of the review form
+  const [reviewLoadId, setReviewLoadId] = useState(null); // ID of the load being reviewed
+  const [reviewRating, setReviewRating] = useState(5); // Rating for the review
+  const [reviewComment, setReviewComment] = useState(''); // Comment for the review
+  // State for swipe animation, stores cards that are flicked out
+  const [gone] = useState(() => new Set());
 
+  // Fetches loads available for the current trucker
   const fetchLoads = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -30,6 +34,7 @@ const TruckerDashboard = () => {
     }
   };
 
+  // Fetches all matches related to the current trucker
   const fetchMatchedLoads = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -37,24 +42,30 @@ const TruckerDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const allMatches = response.data;
-      console.log('All matches from backend:', allMatches);
       const userId = localStorage.getItem('userId');
-      console.log('Current userId from localStorage:', userId);
+
+      // Filter for loads that are matched and confirmed by both parties
       setMatchedLoads(allMatches.filter(match => match.status === 'MATCHED' && match.load.status === 'MATCHED'));
+      // Filter for loads accepted by the trucker, pending shipper confirmation
       setAcceptedLoads(allMatches.filter(match => match.status === 'PENDING' && match.truckerId === userId));
+      // Filter for loads declined by the trucker
       setDeclinedLoads(allMatches.filter(match => match.status === 'REJECTED'));
-      setInTransitLoads(allMatches.filter(match => match.load.status === 'IN_TRANSIT'));
-      setCompletedLoads(allMatches.filter(match => match.load && match.load.status === 'COMPLETED'));
+      // Filter for loads currently in transit, where the current trucker is matched
+      setInTransitLoads(allMatches.filter(match => match.status === 'MATCHED' && match.load.status === 'IN_TRANSIT' && match.truckerId === userId));
+      // Filter for loads completed by the current trucker
+      setCompletedLoads(allMatches.filter(match => match.status === 'MATCHED' && match.load && match.load.status === 'COMPLETED' && match.truckerId === userId));
     } catch (err) {
       setError('Failed to fetch matched loads');
     }
   };
 
+  // Effect hook to fetch initial data when the component mounts
   useEffect(() => {
     fetchLoads();
     fetchMatchedLoads();
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once on mount
 
+  // Spring animation configuration for swipeable cards
   const [props, api] = useSprings(loads.length, i => ({
     x: 0,
     rot: 0,
@@ -62,21 +73,26 @@ const TruckerDashboard = () => {
     config: { friction: 50, tension: 500 },
   }));
 
+  // Gesture binding for swipeable cards
   const bind = useGesture({
     onDrag: ({ args: [index], down, movement: [mx], direction: [xDir], velocity: [vx], cancel }) => {
       const trigger = vx > 0.2; // If speed exceeds 0.2, trigger swipe
       if (!down && trigger) gone.add(index); // If button is released and speed is over the threshold, it's a swipe
 
-      // Update the spring with new values
+      // Update the spring with new values for animation
       api.start(i => {
-        if (index !== i) return; // We're only interested in the card being dragged
-        const isGone = gone.has(index); // True when the card is gone
-        const x = isGone ? (200 + window.innerWidth) * xDir : down ? mx : 0; // When a card is gone it flys out, otherwise it sticks to the mouse
-        const rot = mx / 100 + (isGone ? xDir * 10 * vx : 0); // Rotate the card as it moves
-        const scale = down ? 1.1 : 1; // Scale the card up when it's dragged
+        if (index !== i) return; // Only animate the card being dragged
+        const isGone = gone.has(index); // True when the card is swiped out
+        // Calculate x position: fly out if gone, follow mouse if dragging, or reset to 0
+        const x = isGone ? (200 + window.innerWidth) * xDir : down ? mx : 0;
+        // Calculate rotation: proportional to x movement, or snap back if not dragging
+        const rot = mx / 100 + (isGone ? xDir * 10 * vx : 0);
+        // Scale up when dragging, reset to 1 otherwise
+        const scale = down ? 1.1 : 1;
         return { x, rot, scale, delay: undefined, config: { friction: 50, tension: down ? 800 : isGone ? 200 : 500 } };
       });
 
+      // If card is released and swiped out, handle the swipe action
       if (!down && gone.has(index)) {
         const loadId = loads[index].id;
         const direction = xDir > 0 ? 'right' : 'left';
@@ -85,30 +101,30 @@ const TruckerDashboard = () => {
     },
   });
 
+  // Handles the swipe action (accept or decline a load)
   const handleSwipe = async (direction, loadId) => {
-    console.log(`Swiping load ${loadId} in direction: ${direction}`);
     try {
       const token = localStorage.getItem('token');
       if (direction === 'right') {
-        console.log('Sending POST request to /matches with status PENDING');
+        // Send request to accept the load
         await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { loadId, status: 'PENDING', action: 'swipe' }, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else if (direction === 'left') {
-        console.log('Sending POST request to /matches with status REJECTED');
+        // Send request to decline the load
         await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { loadId, status: 'REJECTED', action: 'swipe' }, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      // Remove the swiped card from the list
+      // Remove the swiped card from the list of available loads
       setLoads(loads.filter(load => load.id !== loadId));
-      console.log('Load removed from frontend state.');
       fetchMatchedLoads(); // Re-fetch matched loads to update accepted/declined lists
     } catch (err) {
       console.error('Failed to swipe', err);
     }
   };
 
+  // Handles updating the status of a load (e.g., from MATCHED to IN_TRANSIT, or IN_TRANSIT to COMPLETED)
   const handleUpdateLoadStatus = async (loadId, status) => {
     try {
       const token = localStorage.getItem('token');
@@ -123,23 +139,31 @@ const TruckerDashboard = () => {
     }
   };
 
+  // Prepares the review form for a specific load
   const handleReview = (loadId) => {
     setReviewLoadId(loadId);
     setShowReviewForm(true);
   };
 
+  // Submits a new review for a completed load
   const handleSubmitReview = async () => {
+    // Client-side validation for rating range
+    if (reviewRating < 1 || reviewRating > 5) {
+      setError('Rating must be between 1 and 5.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
-      console.log('Submitting review for load:', reviewLoadId, 'Rating:', reviewRating, 'Comment:', reviewComment);
-      console.log('Submitting review for load:', reviewLoadId, 'Rating:', reviewRating, 'Comment:', reviewComment);
       await axios.post(`${process.env.REACT_APP_BACKEND_URL}/reviews`, { loadId: reviewLoadId, rating: parseInt(reviewRating), comment: reviewComment }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Reset review form state
       setShowReviewForm(false);
       setReviewLoadId(null);
       setReviewRating(5);
       setReviewComment('');
+      setError(''); // Clear any previous errors
       fetchMatchedLoads(); // Re-fetch loads to update review status
     } catch (err) {
       console.error('Failed to submit review:', err);

@@ -148,7 +148,7 @@ const ShipperDashboard = () => {
       setReviewRating(5);
       setReviewComment('');
       setError(''); // Clear any previous errors
-      fetchMatchedLoads(); // Re-fetch loads to update review status
+      fetchLoads(); // Re-fetch loads to update review status
     } catch (err) {
       console.error('Failed to submit review:', err);
       setError('Failed to submit review');
