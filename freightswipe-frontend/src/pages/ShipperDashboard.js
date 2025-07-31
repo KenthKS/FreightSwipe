@@ -131,6 +131,12 @@ const ShipperDashboard = () => {
 
   // Submits a new review for a completed load
   const handleSubmitReview = async () => {
+    // Client-side validation for rating range
+    if (reviewRating < 1 || reviewRating > 5) {
+      setError('Rating must be between 0 and 5.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       await axios.post(`${process.env.REACT_APP_BACKEND_URL}/reviews`, { loadId: reviewLoadId, rating: parseInt(reviewRating), comment: reviewComment }, {
@@ -141,6 +147,7 @@ const ShipperDashboard = () => {
       setReviewLoadId(null);
       setReviewRating(5);
       setReviewComment('');
+      setError(''); // Clear any previous errors
       fetchMatchedLoads(); // Re-fetch loads to update review status
     } catch (err) {
       console.error('Failed to submit review:', err);

@@ -375,40 +375,49 @@ app.get('/users', authMiddleware, async (req, res) => {
 
 app.post('/reviews', authMiddleware, async (req, res) => {
   const { loadId, rating, comment } = req.body;
-  const reviewerId = req.user.id;
+  const reviewerId = req.user.id; // ID of the user submitting the review
 
   try {
+    // Validate rating input
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5.' });
+    }
+
+    // Find the load and include its matches to determine the reviewed party
     const load = await prisma.load.findUnique({
       where: { id: loadId },
       include: { matches: true }
     });
 
+    // Check if the load exists
     if (!load) {
       return res.status(404).json({ error: 'Load not found' });
     }
 
-    // Determine who is being reviewed
     let reviewedId;
+    // Determine who is being reviewed based on the reviewer's role
     if (req.user.role === 'SHIPPER') {
       // Shipper is reviewing the trucker for this load
       const matchedTrucker = load.matches.find(match => match.loadId === loadId && match.status === 'MATCHED');
       if (!matchedTrucker) {
         return res.status(400).json({ error: 'No matched trucker found for this load' });
       }
+
       reviewedId = matchedTrucker.truckerId;
     } else if (req.user.role === 'TRUCKER') {
       // Trucker is reviewing the shipper for this load
       reviewedId = load.shipperId;
     } else {
+      // Only shippers and truckers are allowed to leave reviews
       return res.status(403).json({ error: 'Only shippers and truckers can leave reviews' });
     }
 
-    // Ensure the load is completed before reviewing
+    // Ensure the load is completed before allowing a review
     if (load.status !== 'COMPLETED') {
       return res.status(400).json({ error: 'Only completed loads can be reviewed' });
     }
 
-    // Prevent duplicate reviews for the same load
+    // Prevent duplicate reviews for the same load by the same reviewer
     const existingReview = await prisma.review.findFirst({
       where: {
         loadId,
@@ -430,7 +439,7 @@ app.post('/reviews', authMiddleware, async (req, res) => {
       },
     });
 
-    res.status(201).json(review);
+    res.status(201).json(review); // Respond with the created review
   } catch (err) {
     console.error('Failed to create review:', err);
     res.status(500).json({ error: 'Failed to create review' });
