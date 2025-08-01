@@ -35,6 +35,11 @@ const CreateLoadForm = ({ onNewLoad }) => {
     setError('');
     setSuccess('');
 
+    if (origin.trim().toLowerCase() === destination.trim().toLowerCase()) {
+      setError('Origin and destination cannot be the same.');
+      return;
+    }
+
     if (parseFloat(weight) <= 0) {
       setError('Weight must be a positive number.');
       return;

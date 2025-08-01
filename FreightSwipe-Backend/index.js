@@ -128,6 +128,10 @@ app.post('/trucker/verify', authMiddleware, async (req, res) => {
 app.post('/loads', authMiddleware, async (req, res) => {
   const { origin, destination, weight, budget, deadline, description } = req.body;
 
+  if (origin.trim().toLowerCase() === destination.trim().toLowerCase()) {
+    return res.status(400).json({ error: 'Origin and destination cannot be the same.' });
+  }
+
   if (parseFloat(weight) <= 0) {
     return res.status(400).json({ error: 'Weight must be a positive number.' });
   }
