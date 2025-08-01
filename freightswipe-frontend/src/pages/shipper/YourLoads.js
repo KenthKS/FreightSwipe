@@ -70,10 +70,10 @@ const YourLoads = () => {
             <p>Budget: ${load.budget}</p>
             <p>Deadline: {new Date(load.deadline).toLocaleDateString()}</p>
             <p>Status: {load.status}</p>
-            {load.status !== 'COMPLETED' && load.status !== 'CANCELLED' && (
+            {load.status === 'PENDING' && (
               <button className="btn btn-danger btn-sm me-2" onClick={() => handleDeleteLoad(load.id)}>Delete</button>
             )}
-            {load.status !== 'COMPLETED' && load.status !== 'CANCELLED' && (
+            {load.status === 'MATCHED' && (
               <button className="btn btn-warning btn-sm" onClick={() => handleCancelLoad(load.id)}>Cancel Load ($5 fee)</button>
             )}
           </li>

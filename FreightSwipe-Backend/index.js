@@ -585,8 +585,8 @@ app.post('/loads/:id/cancel', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to cancel this load' });
     }
 
-    if (load.status === 'CANCELLED' || load.status === 'COMPLETED') {
-      return res.status(400).json({ error: `Load is already ${load.status} and cannot be cancelled.` });
+    if (load.status !== 'MATCHED') {
+      return res.status(400).json({ error: `Only matched loads can be cancelled.` });
     }
 
     const shipper = await prisma.user.findUnique({ where: { id: userId } });
