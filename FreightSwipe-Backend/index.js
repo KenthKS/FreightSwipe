@@ -689,7 +689,6 @@ app.post('/loads/:id/cancel', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to cancel this load' });
     }
 
-    // Only allow cancellation of matched loads
     if (load.status !== 'MATCHED') {
       return res.status(400).json({ error: `Only matched loads can be cancelled.` });
     }
@@ -701,7 +700,7 @@ app.post('/loads/:id/cancel', authMiddleware, async (req, res) => {
 
     const cancellationFee = 5.0; // $5 fee
     if (shipper.balance < cancellationFee) {
-      return res.status(400).json({ error: 'Insufficient balance to cancel load' });
+      return res.status(400).json({ error: 'Insufficient balance to pay the $5 cancellation fee.' });
     }
 
     // Use a transaction to ensure atomicity

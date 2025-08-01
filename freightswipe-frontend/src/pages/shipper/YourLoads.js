@@ -68,7 +68,7 @@ const YourLoads = () => {
         fetchLoads();
       } catch (err) {
         console.error('Failed to cancel load:', err);
-        setError('Failed to cancel load');
+        setError(err.response?.data?.error || 'Failed to cancel load');
       }
     }
   };

@@ -40,9 +40,9 @@ const MatchedLoads = () => {
     <div className="container mt-5">
       <h2>Matched Loads</h2>
       {error && <div className="alert alert-danger">{error}</div>}
-      <ul className="list-group">
-        {matchedLoads.length > 0 ? (
-          matchedLoads.map(match => (
+      {matchedLoads.length > 0 ? (
+        <ul className="list-group">
+          {matchedLoads.map(match => (
             <li key={match.id} className="list-group-item">
               <h5>Load: {match.load.origin} to {match.load.destination}</h5>
               <p>Shipper: {match.shipper.name} ({match.shipper.email})</p>
@@ -58,11 +58,14 @@ const MatchedLoads = () => {
                 <p className="text-success mt-2">Both confirmed. Load is In Transit.</p>
               )}
             </li>
-          ))
-        ) : (
-          <li className="list-group-item">No matched loads yet.</li>
-        )}
-      </ul>
+          ))}
+        </ul>
+      ) : (
+        <div>
+          <p>No matched loads yet.</p>
+          <Link to="/trucker/available-loads" className="btn btn-primary">Find Loads</Link>
+        </div>
+      )}
     </div>
   );
 };

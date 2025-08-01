@@ -78,7 +78,10 @@ const CompletedLoads = () => {
             )
           })
         ) : (
-          <li className="list-group-item">No completed loads yet.</li>
+          <div>
+            <p>No completed loads yet.</p>
+            <Link to="/trucker/available-loads" className="btn btn-primary">Find Loads</Link>
+          </div>
         )}
       </ul>
 

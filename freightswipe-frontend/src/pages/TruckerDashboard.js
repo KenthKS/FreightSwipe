@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 const TruckerDashboard = () => {
   return (
     <div className="container mt-5">
-      <h2>Trucker Dashboard</h2>
+      <h2 className="text-center mb-4">Trucker Dashboard</h2>
+      <p className="text-center text-muted mb-4">Manage your loads and view your progress.</p>
       <div className="list-group">
         <Link to="/trucker/available-loads" className="list-group-item list-group-item-action">Available Loads</Link>
         <Link to="/trucker/matched-loads" className="list-group-item list-group-item-action">Matched Loads</Link>

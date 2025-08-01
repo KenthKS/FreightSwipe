@@ -45,7 +45,11 @@ const AvailableLoads = () => {
     <div className="container mt-5">
       <h2>Available Loads</h2>
       {error && <div className="alert alert-danger">{error}</div>}
-      <Deck data={loads} onSwipe={handleSwipe} />
+      {loads.length > 0 ? (
+        <Deck data={loads} onSwipe={handleSwipe} />
+      ) : (
+        <p>No available loads at the moment. Please check back later.</p>
+      )}
     </div>
   );
 };
