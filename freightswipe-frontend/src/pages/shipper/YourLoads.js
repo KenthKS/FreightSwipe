@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+/**
+ * A component that displays a list of loads created by the shipper.
+ */
 const YourLoads = () => {
+  // State variables for loads and error messages
   const [loads, setLoads] = useState([]);
   const [error, setError] = useState('');
 
+  /**
+   * Fetches the shipper's loads from the backend.
+   */
   const fetchLoads = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Sort loads by creation date in descending order
       const sortedLoads = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setLoads(sortedLoads);
     } catch (err) {
@@ -18,17 +26,24 @@ const YourLoads = () => {
     }
   };
 
+  // Fetch loads when the component mounts
   useEffect(() => {
     fetchLoads();
   }, []);
 
+  /**
+   * Handles the deletion of a load.
+   * @param {string} loadId - The ID of the load to delete.
+   */
   const handleDeleteLoad = async (loadId) => {
+    // Confirm the deletion with the user
     if (window.confirm('Are you sure you want to delete this load?')) {
       try {
         const token = localStorage.getItem('token');
         await axios.delete(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        // Remove the deleted load from the state
         setLoads(loads.filter(load => load.id !== loadId));
       } catch (err) {
         console.error('Failed to delete load:', err);
@@ -37,13 +52,19 @@ const YourLoads = () => {
     }
   };
 
+  /**
+   * Handles the cancellation of a load.
+   * @param {string} loadId - The ID of the load to cancel.
+   */
   const handleCancelLoad = async (loadId) => {
+    // Confirm the cancellation with the user
     if (window.confirm('Are you sure you want to cancel this load? A $5 fee will be charged to your account.')) {
       try {
         const token = localStorage.getItem('token');
         await axios.post(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}/cancel`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        // Refetch the loads to update the status
         fetchLoads();
       } catch (err) {
         console.error('Failed to cancel load:', err);

@@ -5,16 +5,28 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+// --- Prisma and Express Initialization ---
+
 const prisma = new PrismaClient();
 const app = express();
+
+// --- Middleware ---
 
 app.use(cors());
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
+/**
+ * Generates a JWT for a given user.
+ * @param {object} user - The user object.
+ * @returns {string} The generated JWT.
+ */
 const generateToken = (user) => jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
+/**
+ * Middleware to authenticate requests using JWT.
+ */
 const authMiddleware = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
@@ -27,6 +39,13 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+// --- Authentication Routes ---
+
+/**
+ * @route POST /auth/signup
+ * @description Registers a new user.
+ * @access Public
+ */
 app.post('/auth/signup', async (req, res) => {
   const { name, email, password, role } = req.body;
   // Check if a user with the given email already exists
@@ -63,6 +82,13 @@ app.post('/auth/login', async (req, res) => {
   res.json({ token: generateToken(user), user });
 });
 
+// --- Swipe and Match Routes ---
+
+/**
+ * @route POST /swipe
+ * @description Records a swipe action (right or left) from a user.
+ * @access Private
+ */
 app.post('/swipe', authMiddleware, async (req, res) => {
   const { targetUserId, direction } = req.body;
   const userId = req.user.id;
@@ -110,6 +136,13 @@ app.post('/swipe', authMiddleware, async (req, res) => {
   res.json({ matched: false, match: newMatch });
 });
 
+// --- Trucker Routes ---
+
+/**
+ * @route POST /trucker/verify
+ * @description Creates a trucker profile for verification.
+ * @access Private (Truckers only)
+ */
 app.post('/trucker/verify', authMiddleware, async (req, res) => {
   const { vehicleType, licenseId } = req.body;
   if (req.user.role !== 'TRUCKER') return res.status(403).json({ error: 'Only truckers allowed' });
@@ -124,9 +157,17 @@ app.post('/trucker/verify', authMiddleware, async (req, res) => {
   res.json(profile);
 });
 
-// Load Routes
+// --- Load Routes ---
+
+/**
+ * @route POST /loads
+ * @description Creates a new load.
+ * @access Private (Shippers only)
+ */
 app.post('/loads', authMiddleware, async (req, res) => {
   const { origin, destination, weight, budget, deadline, description } = req.body;
+
+  // --- Validation ---
 
   if (origin.trim().toLowerCase() === destination.trim().toLowerCase()) {
     return res.status(400).json({ error: 'Origin and destination cannot be the same.' });
@@ -148,6 +189,8 @@ app.post('/loads', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Deadline cannot be in the past.' });
   }
 
+  // --- Database Creation ---
+
   const load = await prisma.load.create({
     data: {
       shipperId: req.user.id,
@@ -164,6 +207,11 @@ app.post('/loads', authMiddleware, async (req, res) => {
   res.json(load);
 });
 
+/**
+ * @route GET /loads
+ * @description Fetches all loads for the authenticated shipper.
+ * @access Private (Shippers only)
+ */
 app.get('/loads', authMiddleware, async (req, res) => {
   const loads = await prisma.load.findMany({
     where: {
@@ -191,6 +239,11 @@ app.get('/loads', authMiddleware, async (req, res) => {
   res.json(loads);
 });
 
+/**
+ * @route GET /loads/available
+ * @description Fetches all available loads for truckers.
+ * @access Private (Truckers only)
+ */
 app.get('/loads/available', authMiddleware, async (req, res) => {
   if (req.user.role !== 'TRUCKER') {
     return res.status(403).json({ error: 'Only truckers can view available loads' });
@@ -220,6 +273,11 @@ app.get('/loads/available', authMiddleware, async (req, res) => {
   res.json(availableLoads);
 });
 
+/**
+ * @route DELETE /loads/:id
+ * @description Deletes a load.
+ * @access Private (Shippers only)
+ */
 app.delete('/loads/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -238,8 +296,9 @@ app.delete('/loads/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to delete this load' });
     }
 
-    if (load.status === 'MATCHED') {
-      return res.status(403).json({ error: 'Matched loads cannot be deleted' });
+    // Only allow deletion of pending loads
+    if (load.status !== 'PENDING') {
+      return res.status(403).json({ error: 'Only pending loads can be deleted' });
     }
 
     await prisma.load.delete({
@@ -252,7 +311,13 @@ app.delete('/loads/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Match Routes
+// --- Match Routes ---
+
+/**
+ * @route GET /matches
+ * @description Fetches all matches for the authenticated user.
+ * @access Private
+ */
 app.get('/matches', authMiddleware, async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
@@ -292,6 +357,11 @@ app.get('/matches', authMiddleware, async (req, res) => {
   res.json(matches);
 });
 
+/**
+ * @route POST /matches
+ * @description Creates or updates a match.
+ * @access Private
+ */
 app.post('/matches', authMiddleware, async (req, res) => {
   const { loadId, status, matchId, action } = req.body; // Added matchId and action
   const userId = req.user.id;
@@ -389,12 +459,25 @@ app.post('/matches', authMiddleware, async (req, res) => {
   }
 });
 
-// User Routes
+// --- User Routes ---
+
+/**
+ * @route GET /users
+ * @description Fetches all users.
+ * @access Private
+ */
 app.get('/users', authMiddleware, async (req, res) => {
   const users = await prisma.user.findMany();
   res.json(users);
 });
 
+// --- Review Routes ---
+
+/**
+ * @route POST /reviews
+ * @description Creates a new review for a completed load.
+ * @access Private
+ */
 app.post('/reviews', authMiddleware, async (req, res) => {
   const { loadId, rating, comment } = req.body;
   const reviewerId = req.user.id; // ID of the user submitting the review
@@ -468,6 +551,11 @@ app.post('/reviews', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * @route GET /reviews/:userId
+ * @description Fetches all reviews for a given user.
+ * @access Private
+ */
 app.get('/reviews/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
 
@@ -499,6 +587,13 @@ app.get('/reviews/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+// --- Load Status and Cancellation Routes ---
+
+/**
+ * @route PUT /loads/:id/status
+ * @description Updates the status of a load.
+ * @access Private
+ */
 app.put('/loads/:id/status', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -572,6 +667,11 @@ app.put('/loads/:id/status', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * @route POST /loads/:id/cancel
+ * @description Cancels a matched load.
+ * @access Private (Shippers only)
+ */
 app.post('/loads/:id/cancel', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -589,6 +689,7 @@ app.post('/loads/:id/cancel', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to cancel this load' });
     }
 
+    // Only allow cancellation of matched loads
     if (load.status !== 'MATCHED') {
       return res.status(400).json({ error: `Only matched loads can be cancelled.` });
     }
@@ -603,6 +704,7 @@ app.post('/loads/:id/cancel', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Insufficient balance to cancel load' });
     }
 
+    // Use a transaction to ensure atomicity
     await prisma.$transaction(async (prisma) => {
       await prisma.user.update({
         where: { id: userId },
@@ -622,6 +724,8 @@ app.post('/loads/:id/cancel', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to cancel load' });
   }
 });
+
+// --- Server Initialization ---
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
