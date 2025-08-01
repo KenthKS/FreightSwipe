@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import CreateLoadForm from '../../components/CreateLoadForm';
 
 const YourLoads = () => {
   const [loads, setLoads] = useState([]);
@@ -22,10 +21,6 @@ const YourLoads = () => {
   useEffect(() => {
     fetchLoads();
   }, []);
-
-  const handleNewLoad = (newLoad) => {
-    setLoads(prevLoads => [newLoad, ...prevLoads].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-  };
 
   const handleDeleteLoad = async (loadId) => {
     if (window.confirm('Are you sure you want to delete this load?')) {
@@ -61,7 +56,6 @@ const YourLoads = () => {
     <div className="container mt-5">
       <h2>Your Loads</h2>
       {error && <div className="alert alert-danger">{error}</div>}
-      <CreateLoadForm onNewLoad={handleNewLoad} />
       <ul className="list-group mt-4">
         {loads.map(load => (
           <li key={load.id} className="list-group-item">
