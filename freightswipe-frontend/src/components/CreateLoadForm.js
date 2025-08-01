@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const CreateLoadForm = ({ onNewLoad }) => {
@@ -11,6 +11,24 @@ const CreateLoadForm = ({ onNewLoad }) => {
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const originRef = useRef(null);
+  const destinationRef = useRef(null);
+
+  useEffect(() => {
+    const autocompleteOrigin = new window.google.maps.places.Autocomplete(originRef.current);
+    const autocompleteDestination = new window.google.maps.places.Autocomplete(destinationRef.current);
+
+    autocompleteOrigin.addListener('place_changed', () => {
+      const place = autocompleteOrigin.getPlace();
+      setOrigin(place.formatted_address);
+    });
+
+    autocompleteDestination.addListener('place_changed', () => {
+      const place = autocompleteDestination.getPlace();
+      setDestination(place.formatted_address);
+    });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,6 +71,7 @@ const CreateLoadForm = ({ onNewLoad }) => {
           <div className="mb-3">
             <label className="form-label">Origin</label>
             <input
+              ref={originRef}
               type="text"
               className="form-control"
               value={origin}
@@ -63,6 +82,7 @@ const CreateLoadForm = ({ onNewLoad }) => {
           <div className="mb-3">
             <label className="form-label">Destination</label>
             <input
+              ref={destinationRef}
               type="text"
               className="form-control"
               value={destination}
