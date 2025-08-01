@@ -127,6 +127,23 @@ app.post('/trucker/verify', authMiddleware, async (req, res) => {
 // Load Routes
 app.post('/loads', authMiddleware, async (req, res) => {
   const { origin, destination, weight, budget, deadline, description } = req.body;
+
+  if (parseFloat(weight) <= 0) {
+    return res.status(400).json({ error: 'Weight must be a positive number.' });
+  }
+
+  if (parseFloat(budget) <= 0) {
+    return res.status(400).json({ error: 'Budget must be a positive number.' });
+  }
+
+  const selectedDate = new Date(deadline);
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  if (selectedDate < today) {
+    return res.status(400).json({ error: 'Deadline cannot be in the past.' });
+  }
+
   const load = await prisma.load.create({
     data: {
       shipperId: req.user.id,

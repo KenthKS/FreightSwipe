@@ -32,8 +32,34 @@ const CreateLoadForm = ({ onNewLoad }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); // Clear any previous errors immediately
-    setSuccess(''); // Clear any previous success messages immediately
+    setError('');
+    setSuccess('');
+
+    if (parseFloat(weight) <= 0) {
+      setError('Weight must be a positive number.');
+      return;
+    }
+
+    if (parseFloat(budget) <= 0) {
+      setError('Budget must be a positive number.');
+      return;
+    }
+
+    const deadlineParts = deadline.split('-');
+    const selectedDate = new Date(
+      parseInt(deadlineParts[0], 10),
+      parseInt(deadlineParts[1], 10) - 1,
+      parseInt(deadlineParts[2], 10)
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      setError('Deadline cannot be in the past.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
@@ -41,7 +67,7 @@ const CreateLoadForm = ({ onNewLoad }) => {
         destination,
         weight: parseFloat(weight),
         budget: parseFloat(budget),
-        deadline: new Date(deadline).toISOString(),
+        deadline: selectedDate.toISOString(),
         description
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -54,10 +80,10 @@ const CreateLoadForm = ({ onNewLoad }) => {
       setDeadline('');
       setDescription('');
       setSuccess('Load Created Successfully!');
-      setTimeout(() => setSuccess(''), 3000); // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Failed to create load');
-      setSuccess(''); // Ensure success is cleared on error
+      setError(err.response?.data?.error || 'Failed to create load');
+      setSuccess('');
     }
   };
 
