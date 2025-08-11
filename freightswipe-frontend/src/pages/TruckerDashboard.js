@@ -10,8 +10,7 @@ const TruckerDashboard = () => {
         <Link to="/trucker/available-loads" className="list-group-item list-group-item-action">Available Loads</Link>
         <Link to="/trucker/matched-loads" className="list-group-item list-group-item-action">Matched Loads</Link>
         <Link to="/trucker/in-transit-loads" className="list-group-item list-group-item-action">Loads In Transit</Link>
-        <Link to="/trucker/accepted-loads" className="list-group-item list-group-item-action">Accepted Loads</Link>
-        <Link to="/trucker/declined-loads" className="list-group-item list-group-item-action">Declined Loads</Link>
+        
         <Link to="/trucker/completed-loads" className="list-group-item list-group-item-action">Completed Loads</Link>
       </div>
     </div>

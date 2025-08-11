@@ -13,8 +13,11 @@ const AcceptedLoads = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const allMatches = response.data;
+      console.log('All matches:', allMatches);
       const userId = localStorage.getItem('userId');
-      setAcceptedLoads(allMatches.filter(match => match.status === 'PENDING' && match.truckerId === userId));
+      const filteredMatches = allMatches.filter(match => match.status === 'PENDING' && match.truckerId === userId);
+      console.log('Filtered accepted matches:', filteredMatches);
+      setAcceptedLoads(filteredMatches);
     } catch (err) {
       setError('Failed to fetch accepted loads');
     }
@@ -32,7 +35,7 @@ const AcceptedLoads = () => {
         <ul className="list-group">
           {acceptedLoads.map(match => (
             <li key={match.id} className="list-group-item">
-              <h5>Load: {match.load.origin} to {match.load.destination}</h5>
+              <h5>Load: {match.load.origin.address}, {match.load.origin.city}, {match.load.origin.province} to {match.load.destination.address}, {match.load.destination.city}, {match.load.destination.province}</h5>
               <p>Shipper: {match.shipper.name} ({match.shipper.email})</p>
               <p>Status: {match.status}</p>
             </li>

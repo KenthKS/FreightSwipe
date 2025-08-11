@@ -47,7 +47,7 @@ const ReviewsPage = () => {
             <p>{review.comment}</p>
             <small>By: {review.reviewer.name} ({review.reviewer.role})</small>
             <br />
-            <small>For Load: {review.load.origin} to {review.load.destination}</small>
+            <small>For Load: {review.load.origin.address}, {review.load.origin.city}, {review.load.origin.province} to {review.load.destination.address}, {review.load.destination.city}, {review.load.destination.province}</small>
           </div>
         ))}
       </div>

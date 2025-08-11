@@ -12,11 +12,14 @@ COPY package*.json ./
 
 RUN rm -rf node_modules && npm install
 
-# Copy the rest of the application code
-COPY . .
+# Copy Prisma schema and migrations
+COPY prisma ./prisma
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# Copy the rest of the application code
+COPY . .
 
 # Expose the port the app runs on
 EXPOSE 3001

@@ -11,6 +11,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Frontend Login Request:', { email, password });
     try {
       const response = await axios.post('http://localhost:3001/auth/login', { email, password });
       const { token, user } = response.data;

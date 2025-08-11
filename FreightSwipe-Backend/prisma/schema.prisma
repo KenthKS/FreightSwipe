@@ -38,23 +38,35 @@ enum Role {
   ADMIN
 }
 
+model Address {
+  id         String @id @default(cuid())
+  address    String
+  city       String
+  province   String
+  postalCode String
+  country    String
+  originLoads      Load[] @relation("OriginAddress")
+  destinationLoads Load[] @relation("DestinationAddress")
+}
+
 model Load {
-  id          String   @id @default(cuid())
-  shipperId   String
-  origin      String
-  destination String
-  weight      Float
-  budget      Float
-  deadline    DateTime
-  description String?
-  status      LoadStatus @default(PENDING)
-  shipperInTransitConfirmed Boolean @default(false)
-  truckerInTransitConfirmed Boolean @default(false)
-  createdAt   DateTime @default(now())
-  shipper     User     @relation(fields: [shipperId], references: [id])
-  matches     Match[]
-  reviews     Review[]
-  
+  id                        String     @id @default(cuid())
+  shipperId                 String
+  shipper                   User       @relation(fields: [shipperId], references: [id])
+  originId                  String
+  origin                    Address    @relation("OriginAddress", fields: [originId], references: [id])
+  destinationId             String
+  destination               Address    @relation("DestinationAddress", fields: [destinationId], references: [id])
+  weight                    Float
+  budget                    Float
+  deadline                  DateTime
+  description               String?
+  status                    LoadStatus @default(PENDING)
+  shipperInTransitConfirmed Boolean    @default(false)
+  truckerInTransitConfirmed Boolean    @default(false)
+  createdAt                 DateTime   @default(now())
+  matches                   Match[]
+  reviews                   Review[]
 }
 
 model Match {

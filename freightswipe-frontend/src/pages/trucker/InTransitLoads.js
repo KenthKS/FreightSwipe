@@ -32,7 +32,7 @@ const InTransitLoads = () => {
         <ul className="list-group">
           {inTransitLoads.map(match => (
             <li key={match.id} className="list-group-item">
-              <h5>Load: {match.load.origin} to {match.load.destination}</h5>
+              <h5>Load: {match.load.origin.address}, {match.load.origin.city}, {match.load.origin.province} to {match.load.destination.address}, {match.load.destination.city}, {match.load.destination.province}</h5>
               <p>Shipper: {match.shipper.name} ({match.shipper.email})</p>
               <p>Status: {match.load.status}</p>
             </li>

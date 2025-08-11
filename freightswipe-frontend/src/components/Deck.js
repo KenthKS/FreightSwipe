@@ -80,14 +80,14 @@ function Deck({ data, onSwipe }) {
                 <div className='card'>
                   {isLoad ? (
                     <>
-                      <h3>{item.origin} to {item.destination}</h3>
+                      <h3>{item.origin.address}, {item.origin.city}, {item.origin.province} to {item.destination.address}, {item.destination.city}, {item.destination.province}</h3>
                       <p>Weight: {item.weight} lbs</p>
                       <p>Budget: ${item.budget}</p>
                       <p>Deadline: {new Date(item.deadline).toLocaleDateString()}</p>
                     </>
                   ) : (
                     <>
-                      <h5>Load: {item.load.origin} to {item.load.destination}</h5>
+                      <h5>Load: {item.load.origin?.address}, {item.load.origin?.city}, {item.load.origin?.province} to {item.load.destination?.address}, {item.load.destination?.city}, {item.load.destination?.province}</h5>
                       <p>Trucker: {item.trucker.name} ({item.trucker.email})</p>
                       <p>Status: {item.status}</p>
                       <Link to={`/reviews/${item.trucker.id}`} className="btn btn-info btn-sm mt-2">View Reviews</Link>

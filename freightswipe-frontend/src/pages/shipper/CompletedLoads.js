@@ -66,7 +66,7 @@ const CompletedLoads = () => {
             const matchedTrucker = load.matches && load.matches.length > 0 ? load.matches[0].trucker : null;
             return (
               <li key={load.id} className="list-group-item">
-                <h5>{load.origin} to {load.destination}</h5>
+                <h5>{load.origin.address}, {load.origin.city}, {load.origin.province} to {load.destination.address}, {load.destination.city}, {load.destination.province}</h5>
                 <p>Weight: {load.weight} lbs</p>
                 <p>Budget: ${load.budget}</p>
                 <p>Deadline: {new Date(load.deadline).toLocaleDateString()}</p>

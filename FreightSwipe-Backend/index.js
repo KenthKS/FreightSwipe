@@ -69,14 +69,19 @@ app.post('/auth/signup', async (req, res) => {
  * @access Public
  */
 app.post('/auth/login', async (req, res) => {
+  console.log('--- New /auth/login request ---');
+  console.log('Request Body:', JSON.stringify(req.body, null, 2));
   const { email, password } = req.body;
   // Find the user by email
   const user = await prisma.user.findUnique({ where: { email } });
+  console.log('User found:', user ? user.email : 'None');
 
   // Check if user exists and password is correct
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    console.log('Login failed: Invalid credentials');
     return res.status(401).json({ error: 'Invalid credentials' });
   }
+  console.log('Login successful for user:', user.email);
 
   // Generate and return a token for the authenticated user
   res.json({ token: generateToken(user), user });
@@ -165,19 +170,60 @@ app.post('/trucker/verify', authMiddleware, async (req, res) => {
  * @access Private (Shippers only)
  */
 app.post('/loads', authMiddleware, async (req, res) => {
+  console.log('--- New /loads request ---');
+  console.log('Request Body:', JSON.stringify(req.body, null, 2));
+  console.log('--- New /loads request ---');
+  console.log('Request Body:', JSON.stringify(req.body, null, 2));
+
   const { origin, destination, weight, budget, deadline, description } = req.body;
 
-  // --- Validation ---
+  // --- Enhanced Validation ---
+  if (!origin || !destination || !weight || !budget || !deadline) {
+    console.log('Load creation failed: Missing required fields');
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
 
-  if (origin.trim().toLowerCase() === destination.trim().toLowerCase()) {
-    return res.status(400).json({ error: 'Origin and destination cannot be the same.' });
+  // Validate origin address fields
+  if (!origin.address || typeof origin.address !== 'string' || !origin.address.trim()) {
+    return res.status(400).json({ error: 'Origin address is required and must be a valid string' });
+  }
+  if (!origin.city || typeof origin.city !== 'string' || !origin.city.trim()) {
+    return res.status(400).json({ error: 'Origin city is required and must be a valid string' });
+  }
+  if (!origin.province || typeof origin.province !== 'string' || !origin.province.trim()) {
+    return res.status(400).json({ error: 'Origin province is required and must be a valid string' });
+  }
+  if (!origin.postalCode || typeof origin.postalCode !== 'string' || !origin.postalCode.trim()) {
+    return res.status(400).json({ error: 'Origin postal code is required and must be a valid string' });
+  }
+  if (!origin.country || typeof origin.country !== 'string' || !origin.country.trim()) {
+    return res.status(400).json({ error: 'Origin country is required and must be a valid string' });
+  }
+
+  // Validate destination address fields
+  if (!destination.address || typeof destination.address !== 'string' || !destination.address.trim()) {
+    return res.status(400).json({ error: 'Destination address is required and must be a valid string' });
+  }
+  if (!destination.city || typeof destination.city !== 'string' || !destination.city.trim()) {
+    return res.status(400).json({ error: 'Destination city is required and must be a valid string' });
+  }
+  if (!destination.province || typeof destination.province !== 'string' || !destination.province.trim()) {
+    return res.status(400).json({ error: 'Destination province is required and must be a valid string' });
+  }
+  if (!destination.postalCode || typeof destination.postalCode !== 'string' || !destination.postalCode.trim()) {
+    return res.status(400).json({ error: 'Destination postal code is required and must be a valid string' });
+  }
+  if (!destination.country || typeof destination.country !== 'string' || !destination.country.trim()) {
+    return res.status(400).json({ error: 'Destination country is required and must be a valid string' });
   }
 
   if (parseFloat(weight) <= 0) {
+    console.log('Load creation failed: Invalid weight');
     return res.status(400).json({ error: 'Weight must be a positive number.' });
   }
 
   if (parseFloat(budget) <= 0) {
+    console.log('Load creation failed: Invalid budget');
     return res.status(400).json({ error: 'Budget must be a positive number.' });
   }
 
@@ -186,33 +232,64 @@ app.post('/loads', authMiddleware, async (req, res) => {
   today.setUTCHours(0, 0, 0, 0);
 
   if (selectedDate < today) {
+    console.log('Load creation failed: Deadline is in the past');
     return res.status(400).json({ error: 'Deadline cannot be in the past.' });
   }
 
   // --- Database Creation ---
 
-  const load = await prisma.load.create({
-    data: {
-      shipperId: req.user.id,
-      origin,
-      destination,
-      weight,
-      budget,
-      deadline,
-      description,
-      shipperInTransitConfirmed: false,
-      truckerInTransitConfirmed: false,
-    }
-  });
-  res.json(load);
-});
+  try {
+    const createdOriginAddress = await prisma.address.create({
+      data: {
+        address: origin.address.trim(),
+        city: origin.city.trim(),
+        province: origin.province.trim(),
+        postalCode: origin.postalCode.trim(),
+        country: origin.country.trim(),
+      },
+    });
 
+    const createdDestinationAddress = await prisma.address.create({
+      data: {
+        address: destination.address.trim(),
+        city: destination.city.trim(),
+        province: destination.province.trim(),
+        postalCode: destination.postalCode.trim(),
+        country: destination.country.trim(),
+      },
+    });
+
+    const load = await prisma.load.create({
+      data: {
+        shipperId: req.user.id,
+        originId: createdOriginAddress.id,
+        destinationId: createdDestinationAddress.id,
+        weight: parseFloat(weight),
+        budget: parseFloat(budget),
+        deadline: selectedDate.toISOString(),
+        description: description ? description.trim() : null,
+        shipperInTransitConfirmed: false,
+        truckerInTransitConfirmed: false,
+      },
+      include: {
+        origin: true,
+        destination: true,
+      },
+    });
+    console.log('Load created successfully:', load.id);
+    res.json(load);
+  } catch (error) {
+    console.error('Error creating load:', error);
+    res.status(500).json({ error: 'Failed to create load' });
+  }
+});
 /**
  * @route GET /loads
  * @description Fetches all loads for the authenticated shipper.
  * @access Private (Shippers only)
  */
 app.get('/loads', authMiddleware, async (req, res) => {
+  console.log('--- Received GET /loads request ---');
   const loads = await prisma.load.findMany({
     where: {
       shipperId: req.user.id
@@ -233,9 +310,12 @@ app.get('/loads', authMiddleware, async (req, res) => {
             }
           }
         }
-      }
+      },
+      origin: true, // Include origin address details
+      destination: true // Include destination address details
     }
   });
+  console.log('Loads sent to frontend:', JSON.stringify(loads, null, 2));
   res.json(loads);
 });
 
@@ -268,6 +348,10 @@ app.get('/loads/available', authMiddleware, async (req, res) => {
           in: interactedLoadIds,
         },
       },
+    },
+    include: {
+      origin: true,
+      destination: true,
     },
   });
   res.json(availableLoads);
@@ -331,7 +415,7 @@ app.get('/matches', authMiddleware, async (req, res) => {
       },
       include: {
         shipper: { select: { id: true, name: true, email: true, role: true } }, // Include shipper details
-        load: { include: { reviews: true } } // Include load details and its reviews
+        load: { include: { reviews: true, origin: true, destination: true } } // Include load details and its reviews, origin and destination
       }
     });
   } else if (userRole === 'SHIPPER') {
@@ -341,7 +425,7 @@ app.get('/matches', authMiddleware, async (req, res) => {
       },
       include: {
         trucker: { select: { id: true, name: true, email: true, role: true } },
-        load: { include: { reviews: true } }
+        load: { include: { reviews: true, origin: true, destination: true } }
       }
     });
   } else {
@@ -349,7 +433,7 @@ app.get('/matches', authMiddleware, async (req, res) => {
       include: {
         trucker: { select: { id: true, name: true, email: true, role: true } },
         shipper: { select: { id: true, name: true, email: true, role: true } },
-        load: { include: { reviews: true } }
+        load: { include: { reviews: true, origin: true, destination: true } }
       }
     });
   }

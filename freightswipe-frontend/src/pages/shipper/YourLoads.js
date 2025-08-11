@@ -15,9 +15,11 @@ const YourLoads = () => {
   const fetchLoads = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
       const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Frontend received loads data:', response.data);
       // Sort loads by creation date in descending order
       const sortedLoads = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setLoads(sortedLoads);
@@ -80,7 +82,7 @@ const YourLoads = () => {
       <ul className="list-group mt-4">
         {loads.map(load => (
           <li key={load.id} className="list-group-item">
-            <h5>{load.origin} to {load.destination}</h5>
+            <h5>{load.origin?.address}, {load.origin?.city}, {load.origin?.province} to {load.destination?.address}, {load.destination?.city}, {load.destination?.province}</h5>
             <p>Weight: {load.weight} lbs</p>
             <p>Budget: ${load.budget}</p>
             <p>Deadline: {new Date(load.deadline).toLocaleDateString()}</p>

@@ -13,7 +13,10 @@ const DeclinedLoads = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const allMatches = response.data;
-      setDeclinedLoads(allMatches.filter(match => match.status === 'REJECTED'));
+      console.log('All matches:', allMatches);
+      const filteredMatches = allMatches.filter(match => match.status === 'REJECTED');
+      console.log('Filtered declined matches:', filteredMatches);
+      setDeclinedLoads(filteredMatches);
     } catch (err) {
       setError('Failed to fetch declined loads');
     }
@@ -31,7 +34,7 @@ const DeclinedLoads = () => {
         <ul className="list-group">
           {declinedLoads.map(match => (
             <li key={match.id} className="list-group-item">
-              <h5>Load: {match.load.origin} to {match.load.destination}</h5>
+              <h5>Load: {match.load.origin.address}, {match.load.origin.city}, {match.load.origin.province} to {match.load.destination.address}, {match.load.destination.city}, {match.load.destination.province}</h5>
               <p>Shipper: {match.shipper.name} ({match.shipper.email})</p>
               <p>Status: {match.status}</p>
             </li>

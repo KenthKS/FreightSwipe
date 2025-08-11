@@ -44,7 +44,7 @@ const InTransitLoads = () => {
             const matchedTrucker = load.matches && load.matches.length > 0 ? load.matches.find(match => match.status === 'MATCHED')?.trucker : null;
             return (
               <li key={load.id} className="list-group-item">
-                <h5>Load: {load.origin} to {load.destination}</h5>
+                <h5>Load: {load.origin.address}, {load.origin.city}, {load.origin.province} to {load.destination.address}, {load.destination.city}, {load.destination.province}</h5>
                 {matchedTrucker && <p>Trucker: {matchedTrucker.name} ({matchedTrucker.email})</p>}
                 <p>Status: {load.status}</p>
                 {load.status === 'IN_TRANSIT' && (

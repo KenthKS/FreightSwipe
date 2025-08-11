@@ -43,7 +43,7 @@ const MatchedLoads = () => {
         {matchedLoads.length > 0 ? (
           matchedLoads.map(match => (
             <li key={match.id} className="list-group-item">
-              <h5>Load: {match.load.origin} to {match.load.destination}</h5>
+              <h5>Load: {match.load.origin.address}, {match.load.origin.city}, {match.load.origin.province} to {match.load.destination.address}, {match.load.destination.city}, {match.load.destination.province}</h5>
               <p>Trucker: {match.trucker.name} ({match.trucker.email})</p>
               <Link to={`/reviews/${match.trucker.id}`} className="btn btn-info btn-sm me-2">View Reviews</Link>
               <p>Status: {match.status}</p>

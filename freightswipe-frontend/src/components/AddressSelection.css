@@ -1,0 +1,74 @@
+
+.address-selection-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  width: 600px;
+  height: 500px;
+}
+
+.sb-title {
+  position: relative;
+  top: -12px;
+  font-family: Roboto, sans-serif;
+  font-weight: 500;
+}
+
+.sb-title-icon {
+  position: relative;
+  top: -5px;
+}
+
+gmpx-split-layout {
+  height: 100%;
+  width: 100%;
+}
+
+gmpx-split-layout:not(:defined) {
+  visibility: hidden;
+}
+
+.panel {
+  background: white;
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.half-input-container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.half-input {
+  max-width: 120px;
+}
+
+h2 {
+  margin: 0;
+  font-family: Roboto, sans-serif;
+}
+
+input {
+  height: 30px;
+  border: 0;
+  border-bottom: 1px solid black;
+  font-size: 14px;
+  font-family: Roboto, sans-serif;
+  font-style: normal;
+  font-weight: normal;
+}
+
+input:focus::placeholder {
+  color: white;
+}

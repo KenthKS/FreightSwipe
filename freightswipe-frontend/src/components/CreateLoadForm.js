@@ -1,16 +1,28 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
+import { useLoadScript, Autocomplete } from '@react-google-maps/api';
 
-/**
- * A form component for creating new loads.
- * @param {object} props - The component's props.
- * @param {function} props.onNewLoad - A callback function to be invoked when a new load is created.
- */
+const libraries = ['places'];
+
 const CreateLoadForm = ({ onNewLoad }) => {
-  // State variables for form inputs and messages
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+    libraries,
+  });
+
+  const [originStreet, setOriginStreet] = useState('');
+  const [originCity, setOriginCity] = useState('');
+  const [originProvince, setOriginProvince] = useState('');
+  const [originPostalCode, setOriginPostalCode] = useState('');
+  const [originCountry, setOriginCountry] = useState('');
+
+  const [destinationStreet, setDestinationStreet] = useState('');
+  const [destinationCity, setDestinationCity] = useState('');
+  const [destinationProvince, setDestinationProvince] = useState('');
+  const [destinationPostalCode, setDestinationPostalCode] = useState('');
+  const [destinationCountry, setDestinationCountry] = useState('');
+
   const [weight, setWeight] = useState('');
   const [budget, setBudget] = useState('');
   const [deadline, setDeadline] = useState('');
@@ -18,58 +30,122 @@ const CreateLoadForm = ({ onNewLoad }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Refs for Google Maps Autocomplete inputs
-  const originRef = useRef(null);
-  const destinationRef = useRef(null);
+  const originAutocompleteRef = useRef(null);
+  const destinationAutocompleteRef = useRef(null);
 
-  // Effect to initialize Google Maps Autocomplete
-  useEffect(() => {
-    // Create autocomplete instances for origin and destination inputs
-    const autocompleteOrigin = new window.google.maps.places.Autocomplete(originRef.current);
-    const autocompleteDestination = new window.google.maps.places.Autocomplete(destinationRef.current);
+  const handleOriginPlaceChanged = () => {
+    const place = originAutocompleteRef.current.getPlace();
+    fillInAddress(place, setOriginStreet, setOriginCity, setOriginProvince, setOriginPostalCode, setOriginCountry);
+  };
 
-    // Add listeners for when a place is selected from the autocomplete dropdown
-    autocompleteOrigin.addListener('place_changed', () => {
-      const place = autocompleteOrigin.getPlace();
-      setOrigin(place.formatted_address);
-    });
+  const handleDestinationPlaceChanged = () => {
+    const place = destinationAutocompleteRef.current.getPlace();
+    fillInAddress(place, setDestinationStreet, setDestinationCity, setDestinationProvince, setDestinationPostalCode, setDestinationCountry);
+  };
 
-    autocompleteDestination.addListener('place_changed', () => {
-      const place = autocompleteDestination.getPlace();
-      setDestination(place.formatted_address);
-    });
-  }, []);
+  const fillInAddress = (place, setStreet, setCity, setProvince, setPostalCode, setCountry) => {
+    if (!place) return; // Add this check
+    let street_number = '';
+    let route = '';
+    let city = '';
+    let province = '';
+    let postal_code = '';
+    let country = '';
 
-  /**
-   * Handles the form submission for creating a new load.
-   * @param {object} e - The form submission event.
-   */
+    if (place.address_components) {
+      for (const component of place.address_components) {
+        const type = component.types[0];
+        switch (type) {
+          case 'street_number':
+            street_number = component.long_name || '';
+            break;
+          case 'route':
+            route = component.long_name || '';
+            break;
+          case 'locality':
+            city = component.long_name || '';
+            break;
+          case 'administrative_area_level_1':
+            province = component.short_name || '';
+            break;
+          case 'postal_code':
+            postal_code = component.long_name || '';
+            break;
+          case 'country':
+            country = component.long_name || '';
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    setStreet(`${street_number} ${route}`.trim());
+    setCity(city);
+    setProvince(province);
+    setPostalCode(postal_code);
+    setCountry(country);
+  };
+
+  const ensureString = (value) => {
+    return value != null ? String(value).trim() : '';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // --- Form Validation ---
+    const originData = {
+      address: ensureString(originStreet),
+      city: ensureString(originCity),
+      province: ensureString(originProvince),
+      postalCode: ensureString(originPostalCode),
+      country: ensureString(originCountry)
+    };
 
-    // Prevent submission if origin and destination are the same
-    if (origin.trim().toLowerCase() === destination.trim().toLowerCase()) {
+    const destinationData = {
+      address: ensureString(destinationStreet),
+      city: ensureString(destinationCity),
+      province: ensureString(destinationProvince),
+      postalCode: ensureString(destinationPostalCode),
+      country: ensureString(destinationCountry)
+    };
+
+    if (!originData.address || !originData.city || !originData.province || !originData.postalCode || !originData.country) {
+      setError('All origin address fields are required.');
+      return;
+    }
+
+    if (!destinationData.address || !destinationData.city || !destinationData.province || !destinationData.postalCode || !destinationData.country) {
+      setError('All destination address fields are required.');
+      return;
+    }
+
+    if (originData.address.toLowerCase() === destinationData.address.toLowerCase() &&
+        originData.city.toLowerCase() === destinationData.city.toLowerCase() &&
+        originData.province.toLowerCase() === destinationData.province.toLowerCase() &&
+        originData.postalCode.toLowerCase() === destinationData.postalCode.toLowerCase() &&
+        originData.country.toLowerCase() === destinationData.country.toLowerCase()) {
       setError('Origin and destination cannot be the same.');
       return;
     }
 
-    // Validate that weight is a positive number
-    if (parseFloat(weight) <= 0) {
+    if (!weight || parseFloat(weight) <= 0) {
       setError('Weight must be a positive number.');
       return;
     }
 
-    // Validate that budget is a positive number
-    if (parseFloat(budget) <= 0) {
+    if (!budget || parseFloat(budget) <= 0) {
       setError('Budget must be a positive number.');
       return;
     }
 
-    // Validate that the deadline is not in the past
+    if (!deadline) {
+      setError('Deadline is required.');
+      return;
+    }
+
     const deadlineParts = deadline.split('-');
     const selectedDate = new Date(
       parseInt(deadlineParts[0], 10),
@@ -85,37 +161,50 @@ const CreateLoadForm = ({ onNewLoad }) => {
       return;
     }
 
-    // --- API Request ---
-
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
-        origin,
-        destination,
+        origin: originData,
+        destination: destinationData,
         weight: parseFloat(weight),
         budget: parseFloat(budget),
         deadline: selectedDate.toISOString(),
-        description
+        description: ensureString(description)
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Invoke the callback and reset the form on success
       onNewLoad(response.data);
-      setOrigin('');
-      setDestination('');
+      setOriginStreet('');
+      setOriginCity('');
+      setOriginProvince('');
+      setOriginPostalCode('');
+      setOriginCountry('');
+      setDestinationStreet('');
+      setDestinationCity('');
+      setDestinationProvince('');
+      setDestinationPostalCode('');
+      setDestinationCountry('');
       setWeight('');
       setBudget('');
       setDeadline('');
       setDescription('');
       setSuccess('Load Created Successfully!');
-      setTimeout(() => setSuccess(''), 3000); // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      // Set an error message if the API request fails
+      console.error('Error creating load:', err);
       setError(err.response?.data?.error || 'Failed to create load');
       setSuccess('');
     }
   };
+
+  if (loadError) {
+    return <div>Error loading maps</div>;
+  }
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="card mt-4">
@@ -125,27 +214,117 @@ const CreateLoadForm = ({ onNewLoad }) => {
         {success && <div className="alert alert-primary">{success}</div>}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label">Origin</label>
+            <label className="form-label">Origin Address</label>
+            <Autocomplete
+              onLoad={(ref) => (originAutocompleteRef.current = ref)}
+              onPlaceChanged={handleOriginPlaceChanged}
+            >
+              <input
+                type="text"
+                className="form-control"
+                value={originStreet}
+                onChange={(e) => setOriginStreet(e.target.value)}
+                required
+              />
+            </Autocomplete>
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Origin City</label>
             <input
-              ref={originRef}
               type="text"
               className="form-control"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
+              value={originCity}
+              onChange={(e) => setOriginCity(e.target.value)}
               required
             />
           </div>
           <div className="mb-3">
-            <label className="form-label">Destination</label>
+            <label className="form-label">Origin State/Province</label>
             <input
-              ref={destinationRef}
               type="text"
               className="form-control"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
+              value={originProvince}
+              onChange={(e) => setOriginProvince(e.target.value)}
               required
             />
           </div>
+          <div className="mb-3">
+            <label className="form-label">Origin Postal Code</label>
+            <input
+              type="text"
+              className="form-control"
+              value={originPostalCode}
+              onChange={(e) => setOriginPostalCode(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Origin Country</label>
+            <input
+              type="text"
+              className="form-control"
+              value={originCountry}
+              onChange={(e) => setOriginCountry(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Destination Address</label>
+            <Autocomplete
+              onLoad={(ref) => (destinationAutocompleteRef.current = ref)}
+              onPlaceChanged={handleDestinationPlaceChanged}
+            >
+              <input
+                type="text"
+                className="form-control"
+                value={destinationStreet}
+                onChange={(e) => setDestinationStreet(e.target.value)}
+                required
+              />
+            </Autocomplete>
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Destination City</label>
+            <input
+              type="text"
+              className="form-control"
+              value={destinationCity}
+              onChange={(e) => setDestinationCity(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Destination State/Province</label>
+            <input
+              type="text"
+              className="form-control"
+              value={destinationProvince}
+              onChange={(e) => setDestinationProvince(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Destination Postal Code</label>
+            <input
+              type="text"
+              className="form-control"
+              value={destinationPostalCode}
+              onChange={(e) => setDestinationPostalCode(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Destination Country</label>
+            <input
+              type="text"
+              className="form-control"
+              value={destinationCountry}
+              onChange={(e) => setDestinationCountry(e.target.value)}
+              required
+            />
+          </div>
+
           <div className="mb-3">
             <label className="form-label">Weight (lbs)</label>
             <input
