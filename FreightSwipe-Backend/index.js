@@ -3,6 +3,9 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 // --- Prisma and Express Initialization ---
@@ -12,10 +15,20 @@ const app = express();
 
 // --- Middleware ---
 
-app.use(cors());
+app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 app.use(express.json());
+app.use(helmet());
+app.use(cookieParser());
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
+// Rate limiting to prevent brute-force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Generates a JWT for a given user.
@@ -28,7 +41,7 @@ const generateToken = (user) => jwt.sign({ id: user.id, role: user.role }, JWT_S
  * Middleware to authenticate requests using JWT.
  */
 const authMiddleware = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
   try {
     // Verify the token and attach user information to the request
@@ -46,8 +59,18 @@ const authMiddleware = async (req, res, next) => {
  * @description Registers a new user.
  * @access Public
  */
-app.post('/auth/signup', async (req, res) => {
+app.post('/auth/signup', authLimiter, async (req, res) => {
   const { name, email, password, role } = req.body;
+
+  // Input validation
+  if (!name || !email || !password || !role) {
+    return res.status(400).json({ error: 'Please provide name, email, password, and role.' });
+  }
+
+  if (role !== 'SHIPPER' && role !== 'TRUCKER') {
+    return res.status(400).json({ error: 'Invalid role. Must be SHIPPER or TRUCKER.' });
+  }
+
   // Check if a user with the given email already exists
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(400).json({ error: 'Email already exists' });
@@ -60,7 +83,9 @@ app.post('/auth/signup', async (req, res) => {
   });
 
   // Generate and return a token for the newly registered user
-  res.json({ token: generateToken(user), user });
+  const token = generateToken(user);
+  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+  res.json({ user });
 });
 
 /**
@@ -68,7 +93,7 @@ app.post('/auth/signup', async (req, res) => {
  * @description Authenticates a user and returns a JWT.
  * @access Public
  */
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', authLimiter, async (req, res) => {
   console.log('--- New /auth/login request ---');
   console.log('Request Body:', JSON.stringify(req.body, null, 2));
   const { email, password } = req.body;
@@ -84,7 +109,9 @@ app.post('/auth/login', async (req, res) => {
   console.log('Login successful for user:', user.email);
 
   // Generate and return a token for the authenticated user
-  res.json({ token: generateToken(user), user });
+  const token = generateToken(user);
+  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+  res.json({ user });
 });
 
 // --- Swipe and Match Routes ---
@@ -226,7 +253,7 @@ app.post('/loads', authMiddleware, async (req, res) => {
     console.log('Load creation failed: Invalid budget');
     return res.status(400).json({ error: 'Budget must be a positive number.' });
   }
-
+  // Checks if selected date is in the past (Not Possible to create a load with a past deadline)
   const selectedDate = new Date(deadline);
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
@@ -642,6 +669,10 @@ app.post('/reviews', authMiddleware, async (req, res) => {
  */
 app.get('/reviews/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
+
+  if (req.user.id !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
 
   try {
     const reviews = await prisma.review.findMany({

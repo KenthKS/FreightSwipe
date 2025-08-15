@@ -14,10 +14,8 @@ const LoginPage = () => {
     console.log('Frontend Login Request:', { email, password });
     try {
       const response = await axios.post('http://localhost:3001/auth/login', { email, password });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('userId', user.id);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const { user } = response.data;
+      // The backend now sets an HttpOnly cookie, so we don't need to store the token in localStorage
 
       if (user.role === 'SHIPPER') {
         navigate('/shipper/dashboard');
