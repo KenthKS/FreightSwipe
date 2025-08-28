@@ -8,14 +8,10 @@ const AcceptedLoads = () => {
 
   const fetchAcceptedLoads = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const allMatches = response.data;
-      console.log('All matches:', allMatches);
-      const userId = localStorage.getItem('userId');
-      const filteredMatches = allMatches.filter(match => match.status === 'PENDING' && match.truckerId === userId);
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, { withCredentials: true });
+      const { matches, userId } = response.data;
+      console.log('All matches:', matches);
+      const filteredMatches = matches.filter(match => match.status === 'PENDING' && match.truckerId === userId);
       console.log('Filtered accepted matches:', filteredMatches);
       setAcceptedLoads(filteredMatches);
     } catch (err) {

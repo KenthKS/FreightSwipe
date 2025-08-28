@@ -9,12 +9,9 @@ const PendingMatches = () => {
 
   const fetchPendingMatches = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const userId = localStorage.getItem('userId');
-      setPendingMatches(response.data.filter(match => match.status === 'PENDING' && match.shipperId === userId));
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, { withCredentials: true });
+      const { matches, userId } = response.data;
+      setPendingMatches(matches.filter(match => match.status === 'PENDING' && match.shipperId === userId));
     } catch (err) {
       setError('Failed to fetch pending matches');
     }
@@ -26,11 +23,8 @@ const PendingMatches = () => {
 
   const handleMatchResponse = async (direction, matchId) => {
     try {
-      const token = localStorage.getItem('token');
       const status = direction === 'right' ? 'MATCHED' : 'REJECTED';
-      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { matchId, status, action: 'respond' }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { matchId, status, action: 'respond' }, { withCredentials: true });
       fetchPendingMatches();
     } catch (err) {
       console.error('Failed to respond to match:', err);

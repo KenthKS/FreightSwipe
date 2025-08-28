@@ -13,7 +13,7 @@ const LoginPage = () => {
     e.preventDefault();
     console.log('Frontend Login Request:', { email, password });
     try {
-      const response = await axios.post('http://localhost:3001/auth/login', { email, password });
+      const response = await axios.post('http://localhost:3001/auth/login', { email, password }, { withCredentials: true });
       const { user } = response.data;
       // The backend now sets an HttpOnly cookie, so we don't need to store the token in localStorage
 

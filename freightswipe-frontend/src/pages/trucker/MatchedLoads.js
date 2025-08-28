@@ -8,10 +8,7 @@ const MatchedLoads = () => {
 
   const fetchMatchedLoads = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, { withCredentials: true });
       const allMatches = response.data;
       setMatchedLoads(allMatches.filter(match => match.status === 'MATCHED' && match.load.status === 'MATCHED'));
     } catch (err) {
@@ -25,10 +22,7 @@ const MatchedLoads = () => {
 
   const handleUpdateLoadStatus = async (loadId, status) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}/status`, { status }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.put(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}/status`, { status }, { withCredentials: true });
       fetchMatchedLoads();
     } catch (err) {
       console.error('Failed to update load status:', err);

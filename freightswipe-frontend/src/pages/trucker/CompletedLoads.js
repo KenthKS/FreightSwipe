@@ -4,6 +4,7 @@ import axios from 'axios';
 
 const CompletedLoads = () => {
   const [completedLoads, setCompletedLoads] = useState([]);
+  const [userId, setUserId] = useState(null);
   const [error, setError] = useState('');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewLoadId, setReviewLoadId] = useState(null);
@@ -12,13 +13,10 @@ const CompletedLoads = () => {
 
   const fetchCompletedLoads = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const allMatches = response.data;
-      const userId = localStorage.getItem('userId');
-      setCompletedLoads(allMatches.filter(match => match.status === 'MATCHED' && match.load && match.load.status === 'COMPLETED' && match.truckerId === userId));
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, { withCredentials: true });
+      const { matches, userId } = response.data;
+      setCompletedLoads(matches.filter(match => match.status === 'MATCHED' && match.load && match.load.status === 'COMPLETED' && match.truckerId === userId));
+      setUserId(userId);
     } catch (err) {
       setError('Failed to fetch completed loads');
     }
@@ -40,10 +38,7 @@ const CompletedLoads = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/reviews`, { loadId: reviewLoadId, rating: parseInt(reviewRating), comment: reviewComment }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/reviews`, { loadId: reviewLoadId, rating: parseInt(reviewRating), comment: reviewComment }, { withCredentials: true });
       setShowReviewForm(false);
       setReviewLoadId(null);
       setReviewRating(5);
@@ -63,7 +58,6 @@ const CompletedLoads = () => {
       <ul className="list-group">
         {completedLoads.length > 0 ? (
           completedLoads.map(match => {
-            const userId = localStorage.getItem('userId');
             const hasReviewed = match.load && match.load.reviews && Array.isArray(match.load.reviews) && match.load.reviews.some(review => review.reviewerId === userId);
             return (
               <li key={match.id} className="list-group-item">

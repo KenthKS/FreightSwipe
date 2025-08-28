@@ -11,11 +11,8 @@ const ReviewsPage = () => {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const token = localStorage.getItem('token');
         const response = await fetch(`http://localhost:3001/reviews/${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          credentials: 'include',
         });
         if (!response.ok) {
           throw new Error('Failed to fetch reviews');

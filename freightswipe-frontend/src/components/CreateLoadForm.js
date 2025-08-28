@@ -162,7 +162,6 @@ const CreateLoadForm = ({ onNewLoad }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
         origin: originData,
         destination: destinationData,
@@ -170,9 +169,7 @@ const CreateLoadForm = ({ onNewLoad }) => {
         budget: parseFloat(budget),
         deadline: selectedDate.toISOString(),
         description: ensureString(description)
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      }, { withCredentials: true });
 
       onNewLoad(response.data);
       setOriginStreet('');

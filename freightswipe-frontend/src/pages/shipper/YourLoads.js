@@ -14,11 +14,7 @@ const YourLoads = () => {
    */
   const fetchLoads = async () => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads`, { withCredentials: true });
       console.log('Frontend received loads data:', response.data);
       // Sort loads by creation date in descending order
       const sortedLoads = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -41,10 +37,7 @@ const YourLoads = () => {
     // Confirm the deletion with the user
     if (window.confirm('Are you sure you want to delete this load?')) {
       try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.delete(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}`, { withCredentials: true });
         // Remove the deleted load from the state
         setLoads(loads.filter(load => load.id !== loadId));
       } catch (err) {
@@ -62,10 +55,7 @@ const YourLoads = () => {
     // Confirm the cancellation with the user
     if (window.confirm('Are you sure you want to cancel this load? A $5 fee will be charged to your account.')) {
       try {
-        const token = localStorage.getItem('token');
-        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}/cancel`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}/cancel`, {}, { withCredentials: true });
         // Refetch the loads to update the status
         fetchLoads();
       } catch (err) {

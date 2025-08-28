@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
+const Joi = require('joi');
 require('dotenv').config();
 
 // --- Prisma and Express Initialization ---
@@ -51,6 +52,34 @@ const authMiddleware = async (req, res, next) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 };
+
+// --- Joi Schemas ---
+const addressSchema = Joi.object({
+  address: Joi.string().trim().required(),
+  city: Joi.string().trim().required(),
+  province: Joi.string().trim().required(),
+  postalCode: Joi.string().trim().required(),
+  country: Joi.string().trim().required(),
+});
+
+const loadSchema = Joi.object({
+  origin: addressSchema.required(),
+  destination: addressSchema.required(),
+  weight: Joi.number().positive().required(),
+  budget: Joi.number().positive().required(),
+  deadline: Joi.date().iso().required(),
+  description: Joi.string().trim().allow(null, ''),
+});
+
+// --- Validation Middleware ---
+const validate = (schema) => (req, res, next) => {
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+  next();
+};
+
 
 // --- Authentication Routes ---
 
@@ -196,7 +225,7 @@ app.post('/trucker/verify', authMiddleware, async (req, res) => {
  * @description Creates a new load.
  * @access Private (Shippers only)
  */
-app.post('/loads', authMiddleware, async (req, res) => {
+app.post('/loads', authMiddleware, validate(loadSchema), async (req, res) => {
   console.log('--- New /loads request ---');
   console.log('Request Body:', JSON.stringify(req.body, null, 2));
   console.log('--- New /loads request ---');
@@ -204,55 +233,6 @@ app.post('/loads', authMiddleware, async (req, res) => {
 
   const { origin, destination, weight, budget, deadline, description } = req.body;
 
-  // --- Enhanced Validation ---
-  if (!origin || !destination || !weight || !budget || !deadline) {
-    console.log('Load creation failed: Missing required fields');
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
-  // Validate origin address fields
-  if (!origin.address || typeof origin.address !== 'string' || !origin.address.trim()) {
-    return res.status(400).json({ error: 'Origin address is required and must be a valid string' });
-  }
-  if (!origin.city || typeof origin.city !== 'string' || !origin.city.trim()) {
-    return res.status(400).json({ error: 'Origin city is required and must be a valid string' });
-  }
-  if (!origin.province || typeof origin.province !== 'string' || !origin.province.trim()) {
-    return res.status(400).json({ error: 'Origin province is required and must be a valid string' });
-  }
-  if (!origin.postalCode || typeof origin.postalCode !== 'string' || !origin.postalCode.trim()) {
-    return res.status(400).json({ error: 'Origin postal code is required and must be a valid string' });
-  }
-  if (!origin.country || typeof origin.country !== 'string' || !origin.country.trim()) {
-    return res.status(400).json({ error: 'Origin country is required and must be a valid string' });
-  }
-
-  // Validate destination address fields
-  if (!destination.address || typeof destination.address !== 'string' || !destination.address.trim()) {
-    return res.status(400).json({ error: 'Destination address is required and must be a valid string' });
-  }
-  if (!destination.city || typeof destination.city !== 'string' || !destination.city.trim()) {
-    return res.status(400).json({ error: 'Destination city is required and must be a valid string' });
-  }
-  if (!destination.province || typeof destination.province !== 'string' || !destination.province.trim()) {
-    return res.status(400).json({ error: 'Destination province is required and must be a valid string' });
-  }
-  if (!destination.postalCode || typeof destination.postalCode !== 'string' || !destination.postalCode.trim()) {
-    return res.status(400).json({ error: 'Destination postal code is required and must be a valid string' });
-  }
-  if (!destination.country || typeof destination.country !== 'string' || !destination.country.trim()) {
-    return res.status(400).json({ error: 'Destination country is required and must be a valid string' });
-  }
-
-  if (parseFloat(weight) <= 0) {
-    console.log('Load creation failed: Invalid weight');
-    return res.status(400).json({ error: 'Weight must be a positive number.' });
-  }
-
-  if (parseFloat(budget) <= 0) {
-    console.log('Load creation failed: Invalid budget');
-    return res.status(400).json({ error: 'Budget must be a positive number.' });
-  }
   // Checks if selected date is in the past (Not Possible to create a load with a past deadline)
   const selectedDate = new Date(deadline);
   const today = new Date();
@@ -343,7 +323,7 @@ app.get('/loads', authMiddleware, async (req, res) => {
     }
   });
   console.log('Loads sent to frontend:', JSON.stringify(loads, null, 2));
-  res.json(loads);
+  res.json({ loads, userId: req.user.id });
 });
 
 /**
@@ -465,7 +445,7 @@ app.get('/matches', authMiddleware, async (req, res) => {
     });
   }
 
-  res.json(matches);
+  res.json({ matches, userId });
 });
 
 /**

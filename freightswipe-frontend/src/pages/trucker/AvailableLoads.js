@@ -8,10 +8,7 @@ const AvailableLoads = () => {
 
   const fetchLoads = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads/available`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads/available`, { withCredentials: true });
       const sortedLoads = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setLoads(sortedLoads);
     } catch (err) {
@@ -25,15 +22,10 @@ const AvailableLoads = () => {
 
   const handleSwipe = async (direction, loadId) => {
     try {
-      const token = localStorage.getItem('token');
       if (direction === 'right') {
-        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { loadId, status: 'PENDING', action: 'swipe' }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { loadId, status: 'PENDING', action: 'swipe' }, { withCredentials: true });
       } else if (direction === 'left') {
-        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { loadId, status: 'REJECTED', action: 'swipe' }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/matches`, { loadId, status: 'REJECTED', action: 'swipe' }, { withCredentials: true });
       }
       setLoads(loads.filter(load => load.id !== loadId));
     } catch (err) {

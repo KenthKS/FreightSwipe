@@ -8,13 +8,9 @@ const InTransitLoads = () => {
 
   const fetchInTransitLoads = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const allMatches = response.data;
-      const userId = localStorage.getItem('userId');
-      setInTransitLoads(allMatches.filter(match => match.status === 'MATCHED' && match.load.status === 'IN_TRANSIT' && match.truckerId === userId));
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/matches`, { withCredentials: true });
+      const { matches, userId } = response.data;
+      setInTransitLoads(matches.filter(match => match.status === 'MATCHED' && match.load.status === 'IN_TRANSIT' && match.truckerId === userId));
     } catch (err) {
       setError('Failed to fetch in-transit loads');
     }

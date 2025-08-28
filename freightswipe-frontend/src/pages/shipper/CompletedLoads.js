@@ -4,6 +4,7 @@ import axios from 'axios';
 
 const CompletedLoads = () => {
   const [completedLoads, setCompletedLoads] = useState([]);
+  const [userId, setUserId] = useState(null);
   const [error, setError] = useState('');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewLoadId, setReviewLoadId] = useState(null);
@@ -12,11 +13,10 @@ const CompletedLoads = () => {
 
   const fetchCompletedLoads = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setCompletedLoads(response.data.filter(load => load.status === 'COMPLETED'));
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads`, { withCredentials: true });
+      const { loads, userId } = response.data;
+      setCompletedLoads(loads.filter(load => load.status === 'COMPLETED'));
+      setUserId(userId);
     } catch (err) {
       setError('Failed to fetch completed loads');
     }
@@ -38,10 +38,7 @@ const CompletedLoads = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/reviews`, { loadId: reviewLoadId, rating: parseInt(reviewRating), comment: reviewComment }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/reviews`, { loadId: reviewLoadId, rating: parseInt(reviewRating), comment: reviewComment }, { withCredentials: true });
       setShowReviewForm(false);
       setReviewLoadId(null);
       setReviewRating(5);
@@ -61,7 +58,6 @@ const CompletedLoads = () => {
       <ul className="list-group">
         {completedLoads.length > 0 ? (
           completedLoads.map(load => {
-            const userId = localStorage.getItem('userId');
             const hasReviewed = load.reviews && Array.isArray(load.reviews) && load.reviews.some(review => review.reviewerId === userId);
             const matchedTrucker = load.matches && load.matches.length > 0 ? load.matches[0].trucker : null;
             return (

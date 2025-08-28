@@ -7,10 +7,7 @@ const InTransitLoads = () => {
 
   const fetchInTransitLoads = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/loads`, { withCredentials: true });
       setInTransitLoads(response.data.filter(load => load.status === 'IN_TRANSIT'));
     } catch (err) {
       setError('Failed to fetch in-transit loads');
@@ -23,10 +20,7 @@ const InTransitLoads = () => {
 
   const handleUpdateLoadStatus = async (loadId, status) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}/status`, { status }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.put(`${process.env.REACT_APP_BACKEND_URL}/loads/${loadId}/status`, { status }, { withCredentials: true });
       fetchInTransitLoads();
     } catch (err) {
       console.error('Failed to update load status:', err);

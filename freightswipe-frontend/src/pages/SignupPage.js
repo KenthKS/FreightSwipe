@@ -14,10 +14,8 @@ const SignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3001/auth/signup', { name, email, password, role });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const response = await axios.post('http://localhost:3001/auth/signup', { name, email, password, role }, { withCredentials: true });
+      const { user } = response.data;
 
       if (user.role === 'SHIPPER') {
         navigate('/shipper/dashboard');
